@@ -1,13 +1,10 @@
-# Perintah untuk latihan 1
+## Verifikasi Docker
+```cmd
+docker --version
+docker compose version
+docker run --rm hello-world
 
-Prasyarat: Docker dan Docker Compose terinstall, jalankan dari root repositori (e:\\DOCKER\\MSBD-Kel.-3).
-
-Langkah cepat:
-
-1. Start layanan
-
-```powershell
-cd e:\\DOCKER\\MSBD-Kel.-3
+## Menjalankan Docker Compose
 docker compose up -d
 ```
 
@@ -15,33 +12,28 @@ docker compose up -d
 
 ```powershell
 docker compose ps
-docker inspect --format='{{.State.Health.Status}}' msbd-pg
-```
 
-3. Jalankan berkas verifikasi SQL (`latihan/p01/verifikasi.sql`)
+## Akses PostgreSQL via CLI (psql)
+docker compose exec postgres psql -U msbd -d postgres
 
-Opsi A — copy berkas ke container lalu jalankan:
+## Pembuatan Database Pagila & Restore
+docker compose exec postgres createdb -U msbd pagila
+docker compose exec postgres pg_restore -U msbd -d pagila --no-owner /dump/pagila.dump
+docker compose exec postgres psql -U msbd -d pagila -c "\dt"
 
-```powershell
-docker cp .\latihan\p01\verifikasi.sql msbd-pg:/verifikasi.sql
-docker exec msbd-pg psql -U msbd -d latihan -f /verifikasi.sql
-```
+## Menjalankan Verifikasi SQL
+docker compose exec postgres psql -U msbd -d pagila -f /latihan/p01/verifikasi.sql
 
-Opsi B — pipe langsung dari host:
+## Tantangan Tambahan 
+-- Dijalankan di dalam psql (pagila=#)
+\timing on
 
-```powershell
-Get-Content .\latihan\p01\verifikasi.sql -Raw | docker exec -i msbd-pg psql -U msbd -d latihan
-```
+CREATE TABLE besar AS
+SELECT g AS id, md5(g::text) AS nilai
+FROM generate_series(1, 2000000) g;
 
-4. Cek keluaran dan troubleshooting singkat
+SELECT * FROM besar WHERE nilai = '827ccb0eea8a706c4c34a16891f84e7b';
 
-- Jika `psql` gagal: cek `docker logs msbd-pg` untuk pesan error.
-- Jika container belum sehat, tunggu beberapa detik lalu ulangi `docker compose ps`.
+CREATE INDEX ON besar(nilai);
 
-Penjelasan singkat `verifikasi.sql`:
-
-- Berisi query read-only untuk memastikan PostgreSQL responsive dan melihat tabel yang ada.
-- Aman dijalankan di environment latihan.
-
--- Akhiri
-
+SELECT * FROM besar WHERE nilai = '827ccb0eea8a706c4c34a16891f84e7b';
