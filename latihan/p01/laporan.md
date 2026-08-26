@@ -66,7 +66,7 @@ PostgreSQL 17.11 (Debian 17.11-1.pgdg13+2) on x86_64-pc-linux-gnu, compiled by g
 **1. Satu aktivitas yang menurut Anda lebih cepat dilakukan menggunakan psql.**
 > kalau hanya mengecek hal hal kecil dan cepat seperti mengecek versi database atau hal lain yang punya query sedikit, menurut kami psql lebih cepat karena tinggal ketik di terminal, gak perlu buka aplikasi dan tunggu loading.
 
-**Satu aktivitas yang menurut Anda lebih cepat dilakukan menggunakan DBeaver.**
+**2. Satu aktivitas yang menurut Anda lebih cepat dilakukan menggunakan DBeaver.**
 > kalau mau lihat struktur tabel atau hubungan antar tabel, Dbeaver menurut kami lebih cepat karena tinggal buka aplikasi lalu bisa dilihat lewat ER diagram, ga perlu ketik ketik query kalo hanya lihat struktur
 
 ---
