@@ -1,17 +1,14 @@
 ## Verifikasi Docker
-```cmd
 docker --version
 docker compose version
 docker run --rm hello-world
 
 ## Menjalankan Docker Compose
 docker compose up -d
-```
-
-2. Cek status layanan dan health
-
-```powershell
 docker compose ps
+
+## Akses PostgreSQL via CLI (psql)
+docker compose exec postgres psql -U msbd -d postgres
 
 ## Akses PostgreSQL via CLI (psql)
 docker compose exec postgres psql -U msbd -d postgres
