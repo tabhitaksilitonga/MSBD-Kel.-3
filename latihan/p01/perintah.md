@@ -1,6 +1,6 @@
 ## Verifikasi Docker
-docker --version
-docker compose version
+docker --version 
+docker compose version 
 docker run --rm hello-world
 
 ## Menjalankan Docker Compose
