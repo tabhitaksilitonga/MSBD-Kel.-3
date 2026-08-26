@@ -48,16 +48,16 @@ PostgreSQL 17.11 (Debian 17.11-1.pgdg13+2) on x86_64-pc-linux-gnu, compiled by g
 ### Jawaban pertanyaan pemahaman langkah 2
 
 **Apa yang terjadi jika bagian volumes: pada layanan PostgreSQL dihapus, kemudian container dihentikan menggunakan docker compose down -v ?**
-> kalau bagian volumes: dihapus, data PostgreSQL nya hanya disimpan di lapisan internal. lalu ketika docker compose down -v dijalani, container sama volume yang dibuat docker compose dihapus/hilang permanen. jadinya saat environment dijalani kembali, PostgreSQL melakukan inisialisasi ulang pakai konfigurasi yang ada di docker-compose.yml
+> kalau bagian volumes: dihapus, data PostgreSQL nya hanya disimpan di lapisan internal. lalu ketika docker compose down -v dijalani, container jadi dihapus hingga data PostgreSQL yang tersimpan di dalam conteiner juga ikut hilang. jadinya saat environment dijalani kembali, PostgreSQL melakukan inisialisasi ulang pakai konfigurasi yang ada di docker-compose.yml
 
 **Mengapa pemetaan post ditulis "5432:5432" dan bukan cukup satu angka? Apa yang harus diubah apabila apabila komputer Anda sudah memiliki PostgreSQL lain yang menggunakan port 5432?**
-> 5432:5432 dipakai untuk menghubungkan port pada komputer dengan port PostgreSQL di dalam container. Angka pertamanya yang menjadi port pada komputer, sedangkan angka kedua jadi port PostgreSQL di dalam container. Jadi kalau port 5432 udah digunakan oleh PostgreSQL lain, port di komputer bisa diganti, misal menjadi "5433:5432". Jadi PostgreSQL di dalam container tetap pakai port 5432 tapi bisa diakses melalui port 5433
+> 5432:5432 dipakai untuk menghubungkan port pada komputer dengan port PostgreSQL di dalam container. Angka pertamanya yang menjadi port pada komputer, sedangkan angka kedua jadi port PostgreSQL di dalam container. Jadi kalau port 5432 udah digunakan oleh PostgreSQL lain, port di komputer bisa diganti, misal menjadi "5433:5432". jadi PostgreSQL di dalam container tetap pakai port 5432 tapi bisa diakses melalui port 5433
 
 **Apa fungsi block healthcheck? Mengapa healthcheck penting ketika terdapat layanan lain yang bergantung pada basis data?**
-> healthcheck fungsinya untuk memastikan layanan di dalam container bener bener siap beroprasi atau tidak. Perintahnya ngecek kesiapan PostgreSQL menerima query secara berkala. itu penting untuk layanan lain yang bergantung pada basis data biar layanannya dinyalakan setelah basis data siap, sehingga mencegah terjadinya kegagalan koneksi pas di startup
+> healthcheck fungsinya untuk memastikan PostgreSQL di dalam container bener bener siap beroprasi dan menerima koneksi atau query. Healthcheck ini penting ketika ada layanan lain yang bergantung sama database karena layanannya bisa menunggu sampai PostgreSQL nya dinyatakan sehat biar mengurangi risiko kegagalan di koneksi
 
 **Menyimpan password langsung di dalam docker-compose.yml merupakan praktik yang kurang baik. Sebutkan satu cara yang lebih aman dan jelaskan mengapa hal tersebut penting ketika berkas masuk ke repositori Git.**
-> cara yang lebih aman dengan memisahkan kredensial ke dalam berkas lingkungan terpisah, baru memasukkan berkas .env ke dalam aturan .gitignore . ini penting untuk mencegah kebocoran data sensitif saat berkas docker-compose.yml dunggah ke repositori Git publik maupun privat
+> cara yang lebih aman menyimpan kredensial di dalam file .env lalu masukin .env ke dalam .gitignore. ini penting biar mencegah data sensitif seperti password bocor terunggah ke repositori Git entah itu di publik atau privat
 
 ---
 
