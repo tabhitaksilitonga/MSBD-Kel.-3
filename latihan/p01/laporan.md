@@ -158,3 +158,11 @@ LIMIT 5;
 
  **Kalimat: "Yang paling membingungkan dari keluaran ini adalah ..."**
  > Yang paling membingungkan dari keluaran ini adalah banyak informasi yang ditampilkan seperti HashAggregate, Hash Join, Seq Scan, dan angka-angka yang ditampilkan, sehingga belum memahami bagaimana PostgreSQL menggunakan informasi tersebut untuk menjalankan query
+
+ ---
+
+ ### Penjelasan tantangan tambahan
+
+ **Sebelum ada index:** Menggunakan metode Sequential Scan (Memindai seluruh baris) dengan waktu **40.336 ms**
+ **Sesudah ada index:** Menggunakan metode Index Scan (B-Tree Index Lookup) dengan waktu **0.847 ms**
+ **Kesimpulan:** Percobaan pada dua juta baris data menunjukkan bahwa penggunaan index pada kolom `nilai` sangat meningkatkan performa pencarian. Waktu kueri turun dari 40.336 ms menjadi 0.847 ms, atau sekitar 47 kali lebih cepat. Hal ini terjadi karena database menggunakan Index Scan dengan struktur B-Tree sehingga tidak perlu memeriksa seluruh data. Namun, index juga membutuhkan ruang penyimpanan tambahan dan dapat sedikit memperlambat proses penulisan data.
