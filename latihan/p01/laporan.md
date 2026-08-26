@@ -164,5 +164,7 @@ LIMIT 5;
  ### Penjelasan tantangan tambahan
 
  **Sebelum ada index:** Menggunakan metode Sequential Scan (Memindai seluruh baris) dengan waktu **40.336 ms**
+ 
  **Sesudah ada index:** Menggunakan metode Index Scan (B-Tree Index Lookup) dengan waktu **0.847 ms**
+ 
  **Kesimpulan:** Percobaan pada dua juta baris data menunjukkan bahwa penggunaan index pada kolom `nilai` sangat meningkatkan performa pencarian. Waktu kueri turun dari 40.336 ms menjadi 0.847 ms, atau sekitar 47 kali lebih cepat. Hal ini terjadi karena database menggunakan Index Scan dengan struktur B-Tree sehingga tidak perlu memeriksa seluruh data. Namun, index juga membutuhkan ruang penyimpanan tambahan dan dapat sedikit memperlambat proses penulisan data.
