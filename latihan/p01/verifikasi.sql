@@ -1,24 +1,29 @@
--- verifikasi.sql: query read-only untuk verifikasi koneksi dan schema
+-- V1: Jumlah tabel pada skema public (harus bernilai 21)
+SELECT count(*) 
+FROM information_schema.tables 
+WHERE table_schema = 'public' 
+  AND table_type = 'BASE TABLE';
 
--- Versi PostgreSQL
-SELECT version();
+-- V2: Sepuluh tabel terbesar beserta ukurannya
+SELECT relname, 
+       pg_size_pretty(pg_total_relation_size(relid)) AS ukuran
+FROM pg_catalog.pg_statio_user_tables
+ORDER BY pg_total_relation_size(relid) DESC
+LIMIT 10;
 
--- Database aktif dan user
-SELECT current_database() AS database_name;
-SELECT session_user AS connecting_user;
-SELECT now() AS server_time;
+-- V3: Lima film dengan jumlah penyewaan terbanyak
+SELECT f.title, count(*) AS total_sewa
+FROM rental r
+JOIN inventory i ON i.inventory_id = r.inventory_id
+JOIN film f ON f.film_id = i.film_id
+GROUP BY f.title
+ORDER BY total_sewa DESC
+LIMIT 5;
 
--- Hitung tabel public
-SELECT COUNT(*) AS public_table_count
-FROM information_schema.tables
-WHERE table_schema = 'public';
-
--- Daftar tabel (limit 50)
-SELECT table_schema, table_name
-FROM information_schema.tables
-WHERE table_schema = 'public'
-ORDER BY table_name
-LIMIT 50;
-
--- Selesai
-
+-- V4: Rencana eksekusi query (Query Plan)
+EXPLAIN ANALYZE
+SELECT f.title, count(*)
+FROM rental r
+JOIN inventory i ON i.inventory_id = r.inventory_id
+JOIN film f ON f.film_id = i.film_id
+GROUP BY f.title;
