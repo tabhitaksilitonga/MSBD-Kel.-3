@@ -168,3 +168,11 @@ LIMIT 5;
  **Sesudah ada index:** Menggunakan metode Index Scan (B-Tree Index Lookup) dengan waktu **0.847 ms**
  
  **Kesimpulan:** Percobaan pada dua juta baris data menunjukkan bahwa penggunaan index pada kolom `nilai` sangat meningkatkan performa pencarian. Waktu kueri turun dari 40.336 ms menjadi 0.847 ms, atau sekitar 47 kali lebih cepat. Hal ini terjadi karena database menggunakan Index Scan dengan struktur B-Tree sehingga tidak perlu memeriksa seluruh data. Namun, index juga membutuhkan ruang penyimpanan tambahan dan dapat sedikit memperlambat proses penulisan data.
+
+
+ daftar commit
+- Tabhita Kristy SIlitonga - 251402023 (PM) : langkah 1 & langkah 5
+- Jevine Jeje Zakarias Simanjuntak - 251402085 : langkah 2 & langkah tantangan tambahan
+- Fadila Lisma Sari - 251402117 : langkah 4 & langkah tantangan tambahan
+- Qairsya Naurel ein Yaliki - 251402120 : Verifikasi & Perintah
+- Reynald Alvaro Pasaribu - 251402147 : langkah 3 & langkah tantangan tambahan
