@@ -166,3 +166,14 @@ Eksperimen dilakukan untuk mengamati perebutan kunci tabel (*table lock contenti
   ---
 
   ### 10. Jawaban Pertanyaan 1-7
+
+  #### Pertanyaan 6
+  **Catat apa yang terlihat pada`pg_stat_activity`. Perintah mana yang menunggu? Apa akibatnya jika kondisi tersebut terjadi pada basis data produksi saat banyak pengguna sedang mengakses sistem?**
+
+  > Dari hasil `pg_stat_activity`, terlihat bahwa PID 3195 sedang menjalankan perintah `ALTER TABLE kunjungan` dan statusnya `active`, tetapi sedang menunggu `Lock` pada `relation`. Sementara itu, PID 830 berada dalam kondisi idle in transaction, yang berarti proses pada terminal 1 masih terbuka.
+
+  Perintah yang menunggu adalah:
+  `ALTER TABLE kunjungan`
+  `ADD COLUMN catatan_lock text;`
+
+  Hal ini terjadi karena transaksi pada terminal 1 masih memegang lock, sehingga perintah `ALTER TABLE` pada terminal 2 harus menunggu sampai lock tersebut dilepas. Kalau kondisi seperti ini terjadi di database produksi dan banyak pengguna sedang mengakses sistem, beberapa proses bisa ikut tertahan. Akibatnya, akses database menjadi lebih lambat, waktu tunggu pengguna meningkat, bahkan bisa terjadi timeout jika lock terlalu lama.
