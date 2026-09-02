@@ -23,7 +23,7 @@ services:
     volumes:
       - ./latihan/p02/migrations:/flyway/sql
     command:
-      - -url=jdbc:postgresql://postgres:5432/proyek_dev
+      - -url=jdbc:postgresql://postgres:5432/latihan
       - -user=msbd
       - -password=msbd2026
       - -connectRetries=10
