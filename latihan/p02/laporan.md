@@ -209,6 +209,11 @@ Eksperimen dilakukan untuk mengamati perebutan kunci tabel (*table lock contenti
 
   Hal ini terjadi karena transaksi pada terminal 1 masih memegang lock, sehingga perintah `ALTER TABLE` pada terminal 2 harus menunggu sampai lock tersebut dilepas. Kalau kondisi seperti ini terjadi di database produksi dan banyak pengguna sedang mengakses sistem, beberapa proses bisa ikut tertahan. Akibatnya, akses database menjadi lebih lambat, waktu tunggu pengguna meningkat, bahkan bisa terjadi timeout jika lock terlalu lama.
 
+### Pertanyaan 7
+**Mengapa seed data tidak diletakkan langsung di dalam migrations/? Sebutkan satu perbedaan sifat antara migration dan seed data.
+  > Seed data tidak diletakkan langsung di dalam migrations/ karena migration dan seed memiliki tujuan yang berbeda. Migration digunakan untuk mengubah atau mencatat struktur database, sedangkan seed digunakan untuk mengisi data awal atau data contoh.
+
+Perbedaan sifatnya adalah migration biasanya bersifat lebih deterministik dan dapat di-rollback, karena digunakan untuk mengatur perubahan struktur seperti membuat tabel, menambah kolom, atau mengubah index. Sementara itu, seed data biasanya lebih bergantung pada environment dan tidak selalu perlu di-rollback, misalnya data contoh untuk development atau akun awal.
 ---
 
 ### Pembagian Tugas Tim
