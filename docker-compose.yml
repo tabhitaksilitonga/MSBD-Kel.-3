@@ -16,7 +16,7 @@ services:
       interval: 10s
       retries: 5
 
-flyway:
+  flyway:
     image: flyway/flyway:11
     depends_on:
       - postgres
