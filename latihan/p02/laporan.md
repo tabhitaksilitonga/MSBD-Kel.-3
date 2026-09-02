@@ -167,6 +167,16 @@ Eksperimen dilakukan untuk mengamati perebutan kunci tabel (*table lock contenti
 
   ### 10. Jawaban Pertanyaan 1-7
 
+  Pertanyaan 1
+Mengapa lingkungan pengujian memerlukan basis data sendiri, dan bukan sekadar schema terpisah di dalam basis data yang sama?
+
+Lingkungan pengujian sebaiknya memiliki basis data sendiri agar data saat pengujian tidak bercampur atau mengganggu data dari lingkungan lain, terutama database development atau production. Selain itu, database terpisah membuat pengujian lebih aman karena data dapat diubah, dihapus, atau di-reset tanpa memengaruhi database utama.
+
+Pertanyaan 2
+Pilih satu kebutuhan yang memiliki aturan paling rumit. Menurut kelompok kalian, apakah aturan tersebut lebih tepat ditegakkan menggunakan constraint, trigger, atau kode aplikasi? Berikan satu alasan.
+
+Menurut kelompok kami, kebutuhan yang memiliki aturan paling rumit lebih tepat ditegakkan menggunakan trigger. Alasannya, trigger dapat menjalankan aturan secara otomatis ketika terjadi perubahan data di dalam database, sehingga aturan tersebut tetap diterapkan meskipun data diubah dari aplikasi atau langsung melalui database
+
   #### Pertanyaan 6
   **Catat apa yang terlihat pada`pg_stat_activity`. Perintah mana yang menunggu? Apa akibatnya jika kondisi tersebut terjadi pada basis data produksi saat banyak pengguna sedang mengakses sistem?**
 
