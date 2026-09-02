@@ -41,7 +41,7 @@ Kebutuhan data diturunkan langsung dari dokumen kebutuhan data sistem:
 
 ### 4. Penjelasan Singkat ERD
 
-![Entity Relationship Diagram](ERDD.png)
+![Entity Relationship Diagram](erd.png)
 
 Basis data dirancang untuk menjaga integritas referensial dan memenuhi kaidah normalisasi:
 
@@ -165,9 +165,9 @@ Eksperimen dilakukan untuk mengamati perebutan kunci tabel (*table lock contenti
   
   ---
 
-  ### 10. Jawaban Pertanyaan 1-7
+### 10. Jawaban Pertanyaan 1-7
 
-  ### Pertanyaan 1
+### Pertanyaan 1
 **Mengapa lingkungan pengujian memerlukan basis data sendiri, dan bukan sekadar schema terpisah di dalam basis data yang sama?**
 
 > Lingkungan pengujian sebaiknya memiliki basis data sendiri agar data saat pengujian tidak bercampur atau mengganggu data dari lingkungan lain, terutama database development atau production. Selain itu, database terpisah membuat pengujian lebih aman karena data dapat diubah, dihapus, atau di-reset tanpa memengaruhi database utama.
@@ -177,17 +177,17 @@ Eksperimen dilakukan untuk mengamati perebutan kunci tabel (*table lock contenti
 
 > Menurut kelompok kami, kebutuhan yang memiliki aturan paling rumit lebih tepat ditegakkan menggunakan trigger. Alasannya, trigger dapat menjalankan aturan secara otomatis ketika terjadi perubahan data di dalam database, sehingga aturan tersebut tetap diterapkan meskipun data diubah dari aplikasi atau langsung melalui database
 
-  ### Pertanyaan 3
+### Pertanyaan 3
   **Mengapa Peminjaman dan Unit Alat pada contoh tidak dihubungkan langsung, tetapi melalui Baris Pinjam? Apa yang hilang jika hubungan dibuat langsung?**
 
   > Peminjaman dan Unit Alat dihubungkan lewat Baris Pinjam karena satu peminjaman bisa mencakup beberapa unit alat sekaligus, dan satu unit bisa dipinjam berkali-kali di waktu berbeda. Baris Pinjam juga jadi tempat nyimpen kondisi tiap unit saat dipinjam dan dikembalikan. Kalau dihubungkan langsung, satu peminjaman cuma bisa nyatat satu unit, dan detail kondisi per unit itu jadi gak ada tempatnya.
 
-  ## Pertanyaan 4
+### Pertanyaan 4
   **Apa perbedaan antara entitas Alat dan Unit Alat? Sebutkan satu pertanyaan bisnis yang hanya dapat dijawab jika keduanya dipisahkan.**
 
   > Alat itu jenis/model barangnya (misalnya "Mikroskop"), sedangkan Unit Alat itu barang fisiknya satu-satu, masing-masing punya kode dan status sendiri (tersedia/dipinjam/perbaikan). Ini perlu dipisah karena satu jenis alat bisa punya banyak unit dengan kondisi beda-beda. Contoh pertanyaan yang cuma bisa dijawab kalau dipisah: dari 5 mikroskop yang ada, berapa yang lagi bisa dipinjam sekarang?
 
-  ## Pertanyaan 5
+### Pertanyaan 5
   **Seorang anggota kelompok mengubah isi V1__skema_awal.sql setelah migration tersebut sudah diterapkan, kemudian melakukan push ke repositori. Apa yang terjadi ketika anggota lain menjalankan migration? Jelaskan penyebab error dan cara memperbaikinya tanpa menghapus riwayat migration.**
 
   > yang terjadi adalah proses migrasi akan gagal dengan pesan Checksum mismatch. 
@@ -198,7 +198,7 @@ Eksperimen dilakukan untuk mengamati perebutan kunci tabel (*table lock contenti
   1. jalankan perintah repair untuk memperbarui nilai checksum di tabel riwayat biar sinkron sama file terbaru: bash "docker compose run --rm flyway repair" 
   2. jalankan ulang perintah migrasi: bash "docker compose run --rm flyway migrate"
 
-  #### Pertanyaan 6
+### Pertanyaan 6
   **Catat apa yang terlihat pada`pg_stat_activity`. Perintah mana yang menunggu? Apa akibatnya jika kondisi tersebut terjadi pada basis data produksi saat banyak pengguna sedang mengakses sistem?**
 
   > Dari hasil `pg_stat_activity`, terlihat bahwa PID 3195 sedang menjalankan perintah `ALTER TABLE kunjungan` dan statusnya `active`, tetapi sedang menunggu `Lock` pada `relation`. Sementara itu, PID 830 berada dalam kondisi idle in transaction, yang berarti proses pada terminal 1 masih terbuka.
@@ -208,3 +208,22 @@ Eksperimen dilakukan untuk mengamati perebutan kunci tabel (*table lock contenti
   `ADD COLUMN catatan_lock text;`
 
   Hal ini terjadi karena transaksi pada terminal 1 masih memegang lock, sehingga perintah `ALTER TABLE` pada terminal 2 harus menunggu sampai lock tersebut dilepas. Kalau kondisi seperti ini terjadi di database produksi dan banyak pengguna sedang mengakses sistem, beberapa proses bisa ikut tertahan. Akibatnya, akses database menjadi lebih lambat, waktu tunggu pengguna meningkat, bahkan bisa terjadi timeout jika lock terlalu lama.
+
+---
+
+### Pembagian Tugas Tim
+
+* **Tabhita Kristy Silitonga - 251402023 (PM)**  
+  Mengatur alur kerja Git, menyiapkan `docker-compose.yml` (service Flyway), menyusun `kebutuhan.md`, mengeksekusi inisialisasi database (Langkah 1), serta menyusun dokumen akhir `laporan.md` dan `README.md`.
+
+* **Jevine Jeje Zakarias Simanjuntak - 251402085**  
+  Membuat migrasi V2__perubahan_skema.sql, mendokumentasikan bukti rebuild database, dan menjawab pertanyaan.
+
+* **Fadila Lisma Sari - 251402117**  
+  Mengerjakan migrasi evolusi skema 3-langkah (V3, V4, V5), eksperimen locking, mendokumentasikasn pg-stat-activity, serta menjawab pertanyaan.
+
+* **Qairsya Naurel ein Yaliki - 251402120**  
+  Menyusun skrip data awal yang idempoten di `seeds/01_peran.sql`, melakukan pengujian verifikasi seed data, menyusun panduan perintah CLI, serta menjawab pertanyaan
+
+* **Reynald Alvaro Pasaribu - 251402147**  
+  Mengerjakan ERD konseptual ke erd.png, serta merancang/membuat file migrasi/DDL awal V1__skema_awal.sql
