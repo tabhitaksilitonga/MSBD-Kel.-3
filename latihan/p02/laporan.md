@@ -134,6 +134,7 @@ docker compose exec -T postgres psql -U msbd -d proyek_dev < latihan/p02/seeds/0
 
 # Eksekusi kedua untuk memverifikasi sifat idempoten
 docker compose exec -T postgres psql -U msbd -d proyek_dev < latihan/p02/seeds/01_peran.sql
+```
 
 ---
 
@@ -160,7 +161,8 @@ Eksperimen dilakukan untuk mengamati perebutan kunci tabel (*table lock contenti
   SELECT pid, wait_event_type, state, left(query, 60) AS query
   FROM pg_stat_activity
   WHERE datname = 'proyek_dev';
-
+  ```
+  
   ---
 
   ### 10. Jawaban Pertanyaan 1-7
