@@ -16,6 +16,19 @@ services:
       interval: 10s
       retries: 5
 
+flyway:
+    image: flyway/flyway:11
+    depends_on:
+      - postgres
+    volumes:
+      - ./latihan/p02/migrations:/flyway/sql
+    command: >
+      -url=jdbc:postgresql://postgres:5432/proyek_dev
+      -user=postgres
+      -password=postgres
+      -connectRetries=10
+      migrate
+      
   mongo:
     image: mongo:8
     container_name: msbd-mongo
