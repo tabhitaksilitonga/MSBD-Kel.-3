@@ -187,6 +187,17 @@ Eksperimen dilakukan untuk mengamati perebutan kunci tabel (*table lock contenti
 
   > Alat itu jenis/model barangnya (misalnya "Mikroskop"), sedangkan Unit Alat itu barang fisiknya satu-satu, masing-masing punya kode dan status sendiri (tersedia/dipinjam/perbaikan). Ini perlu dipisah karena satu jenis alat bisa punya banyak unit dengan kondisi beda-beda. Contoh pertanyaan yang cuma bisa dijawab kalau dipisah: dari 5 mikroskop yang ada, berapa yang lagi bisa dipinjam sekarang?
 
+  ## Pertanyaan 5
+  **Seorang anggota kelompok mengubah isi V1__skema_awal.sql setelah migration tersebut sudah diterapkan, kemudian melakukan push ke repositori. Apa yang terjadi ketika anggota lain menjalankan migration? Jelaskan penyebab error dan cara memperbaikinya tanpa menghapus riwayat migration.**
+
+  > yang terjadi adalah proses migrasi akan gagal dengan pesan Checksum mismatch. 
+  
+  Penyebab error : saat V1 pertama kali dijalankan, Flyway nyimpan nilai hash/checksum isi filenya ke dalam tabel flyway_schema_history. saat isi file V1 diubah dan di-push, nilai checksum di file baru tidak cocok lagi dengan riwayat di database. Flyway menganggap skrip tersebut udah dimodifikasi secara tidak sah sehingga migrasi dihentikan. 
+
+  Cara memperbaiki (Tanpa Hapus Riwayat): 
+  1. jalankan perintah repair untuk memperbarui nilai checksum di tabel riwayat biar sinkron sama file terbaru: bash "docker compose run --rm flyway repair" 
+  2. jalankan ulang perintah migrasi: bash "docker compose run --rm flyway migrate"
+
   #### Pertanyaan 6
   **Catat apa yang terlihat pada`pg_stat_activity`. Perintah mana yang menunggu? Apa akibatnya jika kondisi tersebut terjadi pada basis data produksi saat banyak pengguna sedang mengakses sistem?**
 
