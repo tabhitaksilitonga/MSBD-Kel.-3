@@ -1,4 +1,12 @@
--- Tabel transaksi kunjungan pasien
+CREATE TABLE jadwal_praktik (
+    id_jadwal bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id_dokter bigint NOT NULL REFERENCES dokter(id_dokter),
+    hari varchar(10) NOT NULL CHECK (hari IN ('Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu')),
+    jam_mulai time NOT NULL,
+    jam_selesai time NOT NULL,
+    CONSTRAINT ck_jam_praktik CHECK (jam_selesai > jam_mulai)
+);
+
 CREATE TABLE kunjungan (
     id_kunjungan bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     id_pasien bigint NOT NULL REFERENCES pasien(id_pasien),
@@ -12,7 +20,6 @@ CREATE TABLE kunjungan (
     CONSTRAINT ck_status_kunjungan CHECK (status IN ('menunggu', 'diperiksa', 'selesai', 'batal'))
 );
 
--- Entitas asosiatif M:N antara kunjungan dan obat
 CREATE TABLE resep (
     id_resep bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     id_kunjungan bigint NOT NULL REFERENCES kunjungan(id_kunjungan) ON DELETE CASCADE,
