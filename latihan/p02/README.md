@@ -18,6 +18,7 @@
 Jalankan seluruh service container (PostgreSQL, Flyway, MongoDB, Redis) di latar belakang:
 ```bash
 docker compose up -d
+```
 Pastikan container database berjalan normal
 ```bash
 docker compose ps
@@ -29,6 +30,7 @@ docker compose ps
 Eksekusi seluruh file migrasi skema (V1 sampai V5) ke dalam database proyek_dev:
 ```bash
 docker compose run --rm flyway migrate
+```
 Untuk memverifikasi status versi dan riwayat skema yang telah diterapkan:
 ```bash
 docker compose run --rm flyway info
