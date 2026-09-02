@@ -167,15 +167,25 @@ Eksperimen dilakukan untuk mengamati perebutan kunci tabel (*table lock contenti
 
   ### 10. Jawaban Pertanyaan 1-7
 
-  Pertanyaan 1
-Mengapa lingkungan pengujian memerlukan basis data sendiri, dan bukan sekadar schema terpisah di dalam basis data yang sama?
+  ### Pertanyaan 1
+**Mengapa lingkungan pengujian memerlukan basis data sendiri, dan bukan sekadar schema terpisah di dalam basis data yang sama?**
 
-Lingkungan pengujian sebaiknya memiliki basis data sendiri agar data saat pengujian tidak bercampur atau mengganggu data dari lingkungan lain, terutama database development atau production. Selain itu, database terpisah membuat pengujian lebih aman karena data dapat diubah, dihapus, atau di-reset tanpa memengaruhi database utama.
+> Lingkungan pengujian sebaiknya memiliki basis data sendiri agar data saat pengujian tidak bercampur atau mengganggu data dari lingkungan lain, terutama database development atau production. Selain itu, database terpisah membuat pengujian lebih aman karena data dapat diubah, dihapus, atau di-reset tanpa memengaruhi database utama.
 
-Pertanyaan 2
-Pilih satu kebutuhan yang memiliki aturan paling rumit. Menurut kelompok kalian, apakah aturan tersebut lebih tepat ditegakkan menggunakan constraint, trigger, atau kode aplikasi? Berikan satu alasan.
+### Pertanyaan 2
+**Pilih satu kebutuhan yang memiliki aturan paling rumit. Menurut kelompok kalian, apakah aturan tersebut lebih tepat ditegakkan menggunakan constraint, trigger, atau kode aplikasi? Berikan satu alasan.**
 
-Menurut kelompok kami, kebutuhan yang memiliki aturan paling rumit lebih tepat ditegakkan menggunakan trigger. Alasannya, trigger dapat menjalankan aturan secara otomatis ketika terjadi perubahan data di dalam database, sehingga aturan tersebut tetap diterapkan meskipun data diubah dari aplikasi atau langsung melalui database
+> Menurut kelompok kami, kebutuhan yang memiliki aturan paling rumit lebih tepat ditegakkan menggunakan trigger. Alasannya, trigger dapat menjalankan aturan secara otomatis ketika terjadi perubahan data di dalam database, sehingga aturan tersebut tetap diterapkan meskipun data diubah dari aplikasi atau langsung melalui database
+
+  ### Pertanyaan 3
+  **Mengapa Peminjaman dan Unit Alat pada contoh tidak dihubungkan langsung, tetapi melalui Baris Pinjam? Apa yang hilang jika hubungan dibuat langsung?**
+
+  > Peminjaman dan Unit Alat dihubungkan lewat Baris Pinjam karena satu peminjaman bisa mencakup beberapa unit alat sekaligus, dan satu unit bisa dipinjam berkali-kali di waktu berbeda. Baris Pinjam juga jadi tempat nyimpen kondisi tiap unit saat dipinjam dan dikembalikan. Kalau dihubungkan langsung, satu peminjaman cuma bisa nyatat satu unit, dan detail kondisi per unit itu jadi gak ada tempatnya.
+
+  ## Pertanyaan 4
+  **Apa perbedaan antara entitas Alat dan Unit Alat? Sebutkan satu pertanyaan bisnis yang hanya dapat dijawab jika keduanya dipisahkan.**
+
+  > Alat itu jenis/model barangnya (misalnya "Mikroskop"), sedangkan Unit Alat itu barang fisiknya satu-satu, masing-masing punya kode dan status sendiri (tersedia/dipinjam/perbaikan). Ini perlu dipisah karena satu jenis alat bisa punya banyak unit dengan kondisi beda-beda. Contoh pertanyaan yang cuma bisa dijawab kalau dipisah: dari 5 mikroskop yang ada, berapa yang lagi bisa dipinjam sekarang?
 
   #### Pertanyaan 6
   **Catat apa yang terlihat pada`pg_stat_activity`. Perintah mana yang menunggu? Apa akibatnya jika kondisi tersebut terjadi pada basis data produksi saat banyak pengguna sedang mengakses sistem?**
