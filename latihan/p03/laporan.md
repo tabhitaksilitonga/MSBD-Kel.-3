@@ -8,4 +8,12 @@
 **2. Pada Q5, berapa kali subquery dievaluasi secara konseptual, dan mengapa "sekali per baris luar" belum tentu sama dengan yang benar-benar dikerjakan mesin?**
 > Secara konseptual, subquery berkorelasi pada Q5 dianggap dievaluasi untuk setiap baris dari query luar karena menggunakan s.store_id dari baris luar. Namun, PosgreSQL tidak harus menjalankannya secara terpisah untuk setiap baris luar. Namun, PostgreSQL tidak harus menjalankannya secara terpisah untuk setiap baris. Query planner dapat mengoptimalkan atau mengubah cara eksekusinya sehingga jumlah evaluasi sebenarnya bisa berbeda dari konsep tersebut.
 
+### Pertanyaan Reflektif B
+
+**1. Pada Q7, mengapa recursive term hanya melihat baris yang baru dihasilkan pada iterasi sebelumnya, dan apa akibatnya jika ia melihat seluruh hasil?**
+> Recursive term cuma lihat baris dari putaran sebelumnya (bukan semua hasil) karena memang gitu cara kerja UNION ALL di recursive CTE — tiap putaran cuma proses "yang baru ketemu kemarin". Kalau dia balik lagi ngecek semua hasil dari awal, jadinya boros dan bisa muncul baris ganda dari data yang harusnya udah kelar diproses.
+
+**2. Kapan mengganti UNION ALL dengan UNION dapat menghentikan siklus, dan mengapa itu tetap bukan solusi yang baik?**
+> Ganti UNION ALL jadi UNION bisa nyetop siklus kalau baris yang muter itu persis sama semua kolomnya — otomatis kebuang karena dianggap duplikat. Tapi ini bukan solusi bagus: pertama, Postgres jadi harus bandingin semua kolom tiap baris baru ke semua baris lama, lumayan berat. Kedua, kalau ada kolom yang nilainya selalu beda tiap putaran (kayak level atau jalur yang makin panjang), baris nggak akan pernah persis sama — jadi UNION gak bakal ketahuan ada siklus dan tetap infinite loop.
+
 ---
