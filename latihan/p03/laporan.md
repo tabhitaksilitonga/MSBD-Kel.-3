@@ -46,9 +46,22 @@
 
 ## Refleksi D - Agregasi dan Operasi Himpunan
 
+**​1. Pada Q16, tanpa GROUPING(), bagaimana pembaca membedakan subtotal dari baris data yang kolomnya memang kosong?
+​> Tanpa GROUPING(), nilai NULL yang dihasilkan oleh ROLLUP (sebagai penanda subtotal atau grand total) akan terlihat identik dengan data asli di database yang memang bernilai NULL. Fungsi GROUPING() mengembalikan nilai 1 khusus untuk baris hasil agregasi subtotal, sehingga kita dapat mengubahnya secara eksplisit menjadi label yang jelas seperti 'SEMUA'.
+
+**2. Pada Q17, mengapa versi FILTER dan CASE WHEN dapat memberi rata-rata berbeda walaupun jumlah baris sama?
+>Perbedaan terjadi karena cara penanganan nilai yang tidak memenuhi syarat kondisi. Pada klausa FILTER, baris yang tidak memenuhi kondisi disingkirkan sebelum kalkulasi AVG() dilakukan, sehingga jumlah penyebut (pembagi) tetap tepat. Pada CASE WHEN, jika kondisi tidak terpenuhi dan menghasilkan angka 0 (bukan NULL), nilai 0 tersebut akan tetap dihitung ke dalam penyebut saat kalkulasi AVG(), yang menyebabkan hasil rata-rata menjadi lebih kecil dari seharusnya.
+
 ---
 
 ## Refleksi E - JSONB
+**1. Dari nomor transaksi, status, jumlah, dan identitas pelanggan di dalam payload, mana yang sebaiknya dipromosikan menjadi kolom relasional dengan constraint dan mana yang tepat tetap berada di JSON? Berikan alasan untuk setiap pilihan.
+>Dipromosikan ke Kolom Relasional (dengan Constraint):
+Nomor Transaksi: Menggunakan constraint PRIMARY KEY atau UNIQUE + NOT NULL untuk menjamin identitas unik transaksi dan mempercepat kueri pencarian.
+Jumlah: Menggunakan tipe data NUMERIC + NOT NULL + CHECK (jumlah >= 0) agar presisi finansial terjamin, perhitungan agregasi (SUM, AVG) berjalan cepat, dan mencegah input bernilai negatif.
+Status: Menggunakan constraint NOT NULL + CHECK (status IN ('pending', 'lunas', 'batal')) atau ENUM untuk efisiensi indeks B-Tree serta menjaga validasi alur kerja operasional.
+Tetap Berada di Dalam JSON:
+Identitas Pelanggan (Detail/Snapshot): Tetap disimpan dalam JSON karena memiliki struktur yang fleksibel (schema drift), opsional, dan berfungsi sebagai snapshot histori data pada saat transaksi terjadi tanpa perlu mengubah skema tabel utama jika ada penambahan atribut di masa mendatang.
 
 ---
 
