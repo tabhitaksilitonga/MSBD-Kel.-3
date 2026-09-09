@@ -47,7 +47,7 @@
 ## Refleksi D - Agregasi dan Operasi Himpunan
 
 **​1. Pada Q16, tanpa GROUPING(), bagaimana pembaca membedakan subtotal dari baris data yang kolomnya memang kosong?**
-​> Tanpa GROUPING(), nilai NULL yang dihasilkan oleh ROLLUP (sebagai penanda subtotal atau grand total) akan terlihat identik dengan data asli di database yang memang bernilai NULL. Fungsi GROUPING() mengembalikan nilai 1 khusus untuk baris hasil agregasi subtotal, sehingga kita dapat mengubahnya secara eksplisit menjadi label yang jelas seperti 'SEMUA'.
+> Tanpa GROUPING(), nilai NULL yang dihasilkan oleh ROLLUP (sebagai penanda subtotal atau grand total) akan terlihat identik dengan data asli di database yang memang bernilai NULL. Fungsi GROUPING() mengembalikan nilai 1 khusus untuk baris hasil agregasi subtotal, sehingga kita dapat mengubahnya secara eksplisit menjadi label yang jelas seperti 'SEMUA'.
 
 **2. Pada Q17, mengapa versi FILTER dan CASE WHEN dapat memberi rata-rata berbeda walaupun jumlah baris sama?**
 > Perbedaan terjadi karena cara penanganan nilai yang tidak memenuhi syarat kondisi. Pada klausa FILTER, baris yang tidak memenuhi kondisi disingkirkan sebelum kalkulasi AVG() dilakukan, sehingga jumlah penyebut (pembagi) tetap tepat. Pada CASE WHEN, jika kondisi tidak terpenuhi dan menghasilkan angka 0 (bukan NULL), nilai 0 tersebut akan tetap dihitung ke dalam penyebut saat kalkulasi AVG(), yang menyebabkan hasil rata-rata menjadi lebih kecil dari seharusnya.
