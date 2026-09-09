@@ -1,3 +1,11 @@
+-- Diminta: buat siklus pada data pegawai, amati Q7, perbaiki query agar
+--          tahan siklus, lalu pulihkan data.
+-- Dipilih: jalur bertipe array pegawai_id + NOT (... = ANY(...)) sebagai
+--          pengaman, karena eksplisit terlihat di query dan tidak
+--          bergantung fitur khusus versi Postgres.
+-- Alternatif: klausa CYCLE bawaan (PostgreSQL 16+); tidak dipilih
+--          sebagai versi utama karena kurang eksplisit untuk dijelaskan.
+
 WITH RECURSIVE hierarki AS (
     SELECT
         pegawai_id, nama, atasan_id, 1 AS level,

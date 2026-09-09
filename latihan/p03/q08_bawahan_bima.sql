@@ -1,3 +1,11 @@
+-- Diminta: semua bawahan langsung maupun tidak langsung dari pegawai
+--          bernama Bima, beserta jaraknya dari Bima.
+-- Dipilih: recursive CTE dengan anchor yang disaring pada Bima, karena
+--          kita cuma perlu menelusuri ke bawah dari satu titik tertentu.
+-- Alternatif: filter hasil Q7 berdasarkan teks jalur yang mengandung
+--          "Bima >"; tidak dipilih karena rawan salah kalau ada nama
+--          lain yang mirip -- filter berbasis id lebih aman.
+
 WITH RECURSIVE bawahan_bima AS (
     SELECT pegawai_id, nama, atasan_id, 0 AS jarak
     FROM pegawai

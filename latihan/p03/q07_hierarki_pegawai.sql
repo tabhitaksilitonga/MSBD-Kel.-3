@@ -1,3 +1,11 @@
+-- Diminta: seluruh pegawai beserta level kedalaman dan jalur jabatan
+--          dari puncak, misalnya "Rina > Bima > Toni".
+-- Dipilih: recursive CTE dengan anchor pegawai yang atasan_id IS NULL,
+--          karena strukturnya tree dan kedalamannya tidak diketahui
+--          di awal.
+-- Alternatif: self-join berulang sebanyak perkiraan level maksimum;
+--          tidak dipilih karena harus menebak jumlah level dulu.
+
 WITH RECURSIVE hierarki AS (
     SELECT
         pegawai_id,

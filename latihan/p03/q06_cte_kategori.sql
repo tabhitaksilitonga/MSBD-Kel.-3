@@ -1,3 +1,14 @@
+-- Diminta: tulis ulang Q2 (kategori dengan >60 film) memakai CTE, lalu
+--          tambah CTE kedua yang menghitung rata-rata tarif sewa per
+--          kategori. Keluaran akhir: nama kategori, jumlah film, rata2 tarif.
+-- Dipilih: dua CTE berurutan (WITH ... , ... AS) karena CTE kedua perlu
+--          menyaring kategori yang sudah lolos filter >60 film dari CTE
+--          pertama, sehingga urutan langkahnya jadi eksplisit dan mudah
+--          dibaca dari atas ke bawah dibanding subquery bersarang.
+-- Alternatif: derived table bersarang (subquery di dalam subquery);
+--          tidak dipilih karena dengan dua langkah filter+agregasi,
+--          bentuknya jadi sulit dibaca (nested parentheses berlapis).
+
 WITH jumlah_per_kategori AS (
     SELECT c.category_id, c.name AS nama_kategori, COUNT(*) AS jumlah_film
     FROM category c
