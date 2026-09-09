@@ -67,6 +67,11 @@ Identitas Pelanggan (Detail/Snapshot): Tetap disimpan dalam JSON karena memiliki
 
 ## Temuan Q14
 
+**Temuan Q14: jumlah tanggal yang berbeda antara frame ROWS dan RANGE, beserta penjelasannya.**
+> pada q14, perbedaan hasil terutama terlihat pada kolom rata-rata. q13 menggunakan ROWS BETWEEN 6 PRECEDING AND CURRENT ROW, sehingga rata-rata dihitung dari maksimal 7 baris terakhir. sedangkan q14 tanpa frame menggunakan default RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW, sehingga rata-rata dihitung dari awal data sampai tanggal tersebut.
+
+untuk running total, jika data sudah diagregasi menjadi 1 tanggal = 1 baris, hasil ROWS dan RANGE akan sama karena tidak ada tanggal kembar. perbedaan RANGE terhadap ROWS pada running total baru terlihat jika terdapat beberapa baris dengan nilai ORDER BY yang sama (peer rows). jumlah tanggal yang berbeda: isi sesuai jumlah tanggal yang muncul dari hasil query Q14.
+
 ---
 
 ## Hasil R1
