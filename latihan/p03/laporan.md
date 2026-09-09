@@ -3,7 +3,7 @@
 ## Anggota dan Kontribusi
 | Nama | NIM | Kontribusi | Commit |
 | :--- | :--- | :--- | :--- |
-| Tabhita Kristy SIlitonga | 251402023 | Project Manager, Setup Lingkungan & Q00, R1 Laporan Bulanan, Finalisasi laporan & readme |---|
+| Tabhita Kristy SIlitonga | 251402023 | Project Manager, Setup Lingkungan & Q00, R1 Laporan Bulanan, Finalisasi laporan & readme | ab2e387 |
 | Jevine Jeje Zakarias Simanjuntak | 251402085 | Q10 – Q15 (+ Pertanyaan Reflektif C & Temuan Q14) | 39a4bb0 |
 | Fadila Lisma Sari | 251402117 | Q01 – Q05 (+ Pertanyaan Reflektif A) | 732d962 |
 | Qairsya Naurel ein Yaliki | 251402120 | Q16 – Q20 (+ Pertanyaan Reflektif D & E) | 889545b |
@@ -46,16 +46,16 @@
 
 ## Refleksi D - Agregasi dan Operasi Himpunan
 
-**​1. Pada Q16, tanpa GROUPING(), bagaimana pembaca membedakan subtotal dari baris data yang kolomnya memang kosong?
-​> Tanpa GROUPING(), nilai NULL yang dihasilkan oleh ROLLUP (sebagai penanda subtotal atau grand total) akan terlihat identik dengan data asli di database yang memang bernilai NULL. Fungsi GROUPING() mengembalikan nilai 1 khusus untuk baris hasil agregasi subtotal, sehingga kita dapat mengubahnya secara eksplisit menjadi label yang jelas seperti 'SEMUA'.
+​1. Pada Q16, tanpa GROUPING(), bagaimana pembaca membedakan subtotal dari baris data yang kolomnya memang kosong?
+​>Tanpa GROUPING(), nilai NULL yang dihasilkan oleh ROLLUP (sebagai penanda subtotal atau grand total) akan terlihat identik dengan data asli di database yang memang bernilai NULL. Fungsi GROUPING() mengembalikan nilai 1 khusus untuk baris hasil agregasi subtotal, sehingga kita dapat mengubahnya secara eksplisit menjadi label yang jelas seperti 'SEMUA'.
 
-**2. Pada Q17, mengapa versi FILTER dan CASE WHEN dapat memberi rata-rata berbeda walaupun jumlah baris sama?
+2. Pada Q17, mengapa versi FILTER dan CASE WHEN dapat memberi rata-rata berbeda walaupun jumlah baris sama?
 >Perbedaan terjadi karena cara penanganan nilai yang tidak memenuhi syarat kondisi. Pada klausa FILTER, baris yang tidak memenuhi kondisi disingkirkan sebelum kalkulasi AVG() dilakukan, sehingga jumlah penyebut (pembagi) tetap tepat. Pada CASE WHEN, jika kondisi tidak terpenuhi dan menghasilkan angka 0 (bukan NULL), nilai 0 tersebut akan tetap dihitung ke dalam penyebut saat kalkulasi AVG(), yang menyebabkan hasil rata-rata menjadi lebih kecil dari seharusnya.
 
 ---
 
 ## Refleksi E - JSONB
-**1. Dari nomor transaksi, status, jumlah, dan identitas pelanggan di dalam payload, mana yang sebaiknya dipromosikan menjadi kolom relasional dengan constraint dan mana yang tepat tetap berada di JSON? Berikan alasan untuk setiap pilihan.
+1. Dari nomor transaksi, status, jumlah, dan identitas pelanggan di dalam payload, mana yang sebaiknya dipromosikan menjadi kolom relasional dengan constraint dan mana yang tepat tetap berada di JSON? Berikan alasan untuk setiap pilihan.
 >Dipromosikan ke Kolom Relasional (dengan Constraint):
 Nomor Transaksi: Menggunakan constraint PRIMARY KEY atau UNIQUE + NOT NULL untuk menjamin identitas unik transaksi dan mempercepat kueri pencarian.
 Jumlah: Menggunakan tipe data NUMERIC + NOT NULL + CHECK (jumlah >= 0) agar presisi finansial terjamin, perhitungan agregasi (SUM, AVG) berjalan cepat, dan mencegah input bernilai negatif.
