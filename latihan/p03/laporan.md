@@ -16,4 +16,15 @@
 **2. Kapan mengganti UNION ALL dengan UNION dapat menghentikan siklus, dan mengapa itu tetap bukan solusi yang baik?**
 > Ganti UNION ALL jadi UNION bisa nyetop siklus kalau baris yang muter itu persis sama semua kolomnya — otomatis kebuang karena dianggap duplikat. Tapi ini bukan solusi bagus: pertama, Postgres jadi harus bandingin semua kolom tiap baris baru ke semua baris lama, lumayan berat. Kedua, kalau ada kolom yang nilainya selalu beda tiap putaran (kayak level atau jalur yang makin panjang), baris nggak akan pernah persis sama — jadi UNION gak bakal ketahuan ada siklus dan tetap infinite loop.
 
+### Pertanyaan Reflektif C
+
+**1. Pada Q14, berapa tanggal yang berbeda, dan sifat data apa pada tabel payment yang menyebabkan perbedaan?**
+> Jumlah tanggal yang berbeda bisa dilihat dari hasil Q14. Perbedaannya terjadi karena data payment punya tanggal yang berurutan tapi jumlah transaksi tiap harinya beda. Q13 pakai frame ROWS, jadi rata-rata hanya mengambil 7 hari terakhir. Sedangkan Q14 tanpa frame pakai default RANGE, yang ngambil seluruh baris dari awal sampai tanggal tersebut, jadinya hasil rata-ratanya bisa berbeda.
+
+**2. Jika Q13 menjadi laporan resmi keuangan, versi mana yang benar dan mengapa kesalahan frame sulit ditemukan melalui pengujian biasa?**
+> yang benar untuk laporan Q13 adalah versi yang pakai ROWS BETWEEN 6 PRECEDING AND CURRENT ROW, karena memang ingin menghitung rata-rata 7 hari. Kesalahan frame susah ditemukan karena query tetap jalan dan hasilnya tetap terlihat masuk akal. Jadi secara teknis ga error, tapi makna angkanya sudah berbeda.
+
+**3. Pada Q15, apa yang terjadi pada total belanja jika ORDER BY ditambahkan ke dalam OVER tanpa menuliskan frame?**
+> Kalau ORDER BY ditambahkan tanpa frame, total belanja tidak lagi nunjukin total seluruh belanja pelanggan di setiap baris. PostgreSQL akan memakai frame default RANGE ... CURRENT ROW, jadinya nilainya menjadi total kumulatif sampai pembayarannya. Jadi totalnya bisa berbeda-beda di setiap baris, bukan sama untuk semua pembayaran pelanggan.
+
 ---
