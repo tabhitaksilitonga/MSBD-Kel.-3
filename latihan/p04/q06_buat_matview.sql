@@ -9,3 +9,7 @@ FROM lab4.jejak_akses a
 GROUP BY 1, 2
 ORDER BY 1, 2
 WITH NO DATA;
+
+SELECT * FROM lab4.ringkasan_akses;
+
+REFRESH MATERIALIZED VIEW lab4.ringkasan_akses;
