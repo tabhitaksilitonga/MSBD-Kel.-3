@@ -65,3 +65,15 @@ Pada refresh concurrently, pembaca tetap dapat menjalankan query saat proses ref
 
 ### Reflektif B
 Materialized view mempercepat laporan karena hasil query sudah disimpan, tapi datanya tidak selalu terbaru. Komprominya, laporan dapat ditetapkan memiliki batas kebasian, misalnya 15 menit, dengan refresh setiap 15 menit. Jika refresh gagal, gunakan hasil refresh terakhir yang berhasil dan lakukan percobaan ulang setelah masalah diperbaiki.
+
+
+---
+
+### Reflektif D
+**Aturan periode harga tidak tumpang tindih dapat ditulis sebagai trigger yang membaca tabel sebelum INSERT. Jelaskan mengapa trigger itu bisa gagal ketika dua transaksi berjalan bersamaan, sedangkan EXCLUDE tidak, dengan bahasa Anda sendiri.** 
+> Trigger BEFORE INSERT yang cek manual bisa kebobolan saat dua transaksi jalan bersamaan: keduanya sama-sama SELECT dulu buat cek tumpang tindih, tapi karena masing-masing belum lihat perubahan punya yang lain (belum commit), keduanya lolos pengecekan dan sama-sama berhasil insert — padahal harusnya bentrok. Ini race condition, karena ada jeda antara "cek" dan "insert" yang gak terlindungi.EXCLUDE gak kena masalah ini karena pengecekan dan penguncian jadi satu operasi atomik di level index GiST — begitu satu transaksi insert, baris yang bentrok langsung ketahan/gagal, gak ada celah waktu buat transaksi lain nyelip.
+
+
+## Reflektif E
+**Berapa lama jarak rilis yang Anda usulkan antara 0045 dan 0046? Bukti apa yang harus dikumpulkan sebelum berani menjalankan 0046, mengingat isinya tidak dapat dikembalikan sepenuhnya?**
+> Jarak yang kami usulin: minimal satu siklus rilis penuh (~1-2 minggu), soalnya 0046 ngehapus kolom rental_rate secara permanen dan .down.sql-nya cuma bisa balikin strukturnya, bukan datanya.
