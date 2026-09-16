@@ -16,23 +16,31 @@ Kerugian:
 Keadaan konkret yang malah mempersulit tim:
 misal tim developer disuruh masukin data film baru yang harga sewanya normal (misal 4.99) lewat view film_murah (kayak di Q3). itu pasti langsung ditolak sama database karena melanggar CHECK OPTION atau pas mau input data rekap pendapatan (kayak di Q4), pasti error juga karena view yang pakai GROUP BY emang nggak bisa di-insert langsung. jadinya, developer bakal stuck, mau nggak mau mereka harus bikin trigger INSTEAD OF yang logikanya ribet, atau malah nekat bypass view dan akses tabel dasar langsung. padahal tujuan awal arsitekturnya kan biar aksesnya terpusat dan rapi, eh malah jadi penghambat workflow tim sendiri pas butuh fitur input data yang nggak sesuai sama kriteria view.
 
-## Q5 — Query Dasar Akses
+----
 
-Query dasar digunakan untuk merangkum data `lab4.jejak_akses` berdasarkan bulan dan kanal. Query menghitung jumlah akses dan jumlah film unik.
+## LANGKAH 3 · MATERIALIZED VIEW
 
-Hasil query mencakup data dari September 2025 sampai Maret 2026 untuk kanal `android`, `ios`, `kiosk`, dan `web`.
+### Q5
+Query digunakan untuk menampilkan jumlah akses dan jumlah film unik berdasarkan bulan dan kanal.
 
-### Timing
+Waktu eksekusi: `Time: 2498.191 ms (00:02.498)`
 
-- Q5 Query dasar: **[ISI ANGKA TIME Q5 DI SINI]**
+### Q6
+Query Q5 dibuat menjadi materialized view `lab4.ringkasan_akses` dengan `WITH NO DATA`. Pada pengujian ulang, materialized view sudah tersedia sehingga tidak dilakukan pembuatan ulang.
 
-## Q6 — Membuat Materialized View
+Setelah refresh biasa, data berhasil dimuat.
 
-Materialized view dibuat dengan nama `lab4.ringkasan_akses` menggunakan `WITH NO DATA`.
+Waktu refresh: `2812.472 ms`
 
-### Error sebelum refresh
+### Q7
+Pada pengujian ulang, materialized view sudah memiliki index yang diperlukan sehingga `REFRESH MATERIALIZED VIEW CONCURRENTLY` berhasil dijalankan.
 
-```text
-ERROR:  materialized view "ringkasan_akses" has not been populated
-HINT:  Use the REFRESH MATERIALIZED VIEW command
+Waktu refresh concurrently: `2633.745 ms`
 
+Refresh concurrently tetap memiliki proses tambahan untuk menjaga agar pembaca dapat mengakses materialized view selama refresh.
+
+### Q8
+Pada refresh concurrently, pembaca tetap dapat menjalankan query saat proses refresh berlangsung. Pada refresh biasa, pembaca dapat menunggu hingga proses refresh selesai.
+
+### Reflektif B
+Materialized view mempercepat laporan karena hasil query sudah disimpan, tapi datanya tidak selalu terbaru. Komprominya, laporan dapat ditetapkan memiliki batas kebasian, misalnya 15 menit, dengan refresh setiap 15 menit. Jika refresh gagal, gunakan hasil refresh terakhir yang berhasil dan lakukan percobaan ulang setelah masalah diperbaiki.
