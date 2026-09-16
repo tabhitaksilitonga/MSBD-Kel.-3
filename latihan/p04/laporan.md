@@ -19,7 +19,7 @@ misal tim developer disuruh masukin data film baru yang harga sewanya normal (mi
 
 
 
-##refleksi c - question and answer option
+## refleksi c - question and answer option
 
 **1. Kapan Trigger Per Baris Tetap Lebih Tepat Walaupun Lebih Lambat?**
 > Trigger per baris (FOR EACH ROW) tetap lebih tepat saat logika audit atau validasi memerlukan pemeriksaan konteks individual yang kompleks, pembacaan state dinamis eksternal per baris sebelum modifikasi, atau ketika variabel konteks baris (OLD dan NEW) perlu diproses melalui kode prosedural eksternal/APIs eksepsional per item.
