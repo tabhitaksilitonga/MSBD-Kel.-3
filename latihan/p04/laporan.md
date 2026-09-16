@@ -16,6 +16,27 @@ Kerugian:
 Keadaan konkret yang malah mempersulit tim:
 misal tim developer disuruh masukin data film baru yang harga sewanya normal (misal 4.99) lewat view film_murah (kayak di Q3). itu pasti langsung ditolak sama database karena melanggar CHECK OPTION atau pas mau input data rekap pendapatan (kayak di Q4), pasti error juga karena view yang pakai GROUP BY emang nggak bisa di-insert langsung. jadinya, developer bakal stuck, mau nggak mau mereka harus bikin trigger INSTEAD OF yang logikanya ribet, atau malah nekat bypass view dan akses tabel dasar langsung. padahal tujuan awal arsitekturnya kan biar aksesnya terpusat dan rapi, eh malah jadi penghambat workflow tim sendiri pas butuh fitur input data yang nggak sesuai sama kriteria view.
 
+
+
+
+##refleksi c - question and answer option
+
+**1. Kapan Trigger Per Baris Tetap Lebih Tepat Walaupun Lebih Lambat?**
+> Trigger per baris (FOR EACH ROW) tetap lebih tepat saat logika audit atau validasi memerlukan pemeriksaan konteks individual yang kompleks, pembacaan state dinamis eksternal per baris sebelum modifikasi, atau ketika variabel konteks baris (OLD dan NEW) perlu diproses melalui kode prosedural eksternal/APIs eksepsional per item.
+
+**2. Kemampuan yang Tidak Dimiliki Trigger Pernyataan:**
+> Trigger pernyataan tidak memiliki akses langsung ke variabel bawaan OLD dan NEW untuk mengevaluasi individual tuple secara langsung saat eksekusi berjalan baris demi baris, serta tidak dapat digunakan untuk membatalkan (cancel/abort) atau memodifikasi data baris spesifik sebelum disimpan (BEFORE FOR EACH ROW).
+
+**3.Mengapa Mengirim Surel Langsung dari Trigger Buruk Ketika Transaksi Di-rollback?**
+> Pengiriman surel bersifat non-transaksional (efek samping eksternal/out-of-band side effect). Jika trigger mengirim surel lalu operasi database berikutnya mengalami kegagalan dan mengalami ROLLBACK, perubahan data di database akan dibatalkan, namun surel sudah terlanjur terkirim. Hal ini menyebabkan disinkronisasi data di mana penerima surel mendapat notifikasi mengenai perubahan yang sebenarnya tidak pernah terjadi di dalam database.
+
+
+
+
+
+
+
+
 ----
 
 ## LANGKAH 3 · MATERIALIZED VIEW
