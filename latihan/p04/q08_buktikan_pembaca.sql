@@ -1,0 +1,49 @@
+-- =========================
+-- PENGUJIAN 1: CONCURRENTLY
+-- =========================
+-- Session 1:
+-- \timing on
+-- INSERT INTO lab4.jejak_akses (film_id, waktu, kanal)
+-- SELECT (random() * 999)::int + 1, now(), 'web'
+-- FROM generate_series(1, 200000);
+--
+-- Hasil:
+-- INSERT 0 200000
+-- Time: 1851.303 ms (00:01.851)
+--
+-- REFRESH MATERIALIZED VIEW CONCURRENTLY lab4.ringkasan_akses;
+--
+-- Hasil:
+-- REFRESH MATERIALIZED VIEW
+-- Time: 2785.430 ms (00:02.785)
+
+-- Session 2:
+-- \timing on
+-- SELECT count(*) FROM lab4.ringkasan_akses;
+--
+-- Hasil:
+-- count
+-- -------
+--     52
+-- (1 row)
+-- Time: 5.106 ms
+
+-- =========================
+-- PENGUJIAN 2: REFRESH NORMAL
+-- =========================
+-- Session 1:
+-- REFRESH MATERIALIZED VIEW lab4.ringkasan_akses;
+--
+-- Hasil:
+-- REFRESH MATERIALIZED VIEW
+-- Time: 1830.936 ms (00:01.831)
+
+-- Session 2:
+-- SELECT count(*) FROM lab4.ringkasan_akses;
+--
+-- Hasil:
+-- count
+-- -------
+--     52
+-- (1 row)
+-- Time: 2.896 ms

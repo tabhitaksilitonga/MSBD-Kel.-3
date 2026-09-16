@@ -1,0 +1,79 @@
+# Laporan P04 — SQL Lanjutan II
+## Materialized View: Q5–Q8 dan Reflektif B
+
+---
+
+## Refleksi A - View dan WITH CHECK OPTION
+
+**1. Sebuah tim menempatkan seluruh akses aplikasi melalui view dengan alasan lebih aman dan lebih rapi. Sebutkan dua keuntungan, dua kerugian, dan satu keadaan konkret ketika pendekatan ini justru mempersulit tim berdasarkan pengamatan Q1–Q4.**
+> Keuntungan:
+1. lebih aman buat data. view bisa nyembunyiin kolom-kolom sensitif dari tabel asli. jadi, aplikasi atau user cuma bisa akses data yang emang diizinin aja, nggak bisa intip sembarangan.
+2. kode aplikasi jadi lebih bersih. query yg tadinya ribet udah dibungkus rapi di view. jadi backend tinggal SELECT simpel aja tanpa perlu mikirin logika database yang ruwet di sisi kode program.
+Kerugian:
+1. nggak fleksibel buat operasi tulis (INSERT/UPDATE/DELETE). Nggak semua view bisa dimodifikasi datanya secara langsung, apalagi kalau view-nya pakai fungsi agregat atau aturan filter yang ketat.
+2. ribet pas maintenance. Kalau struktur tabel aslinya berubah (misal nama kolom diganti atau tabelnya di-drop), view yang bergantung sama tabel itu bakal langsung error dan harus dibenerin manual satu per satu.
+
+Keadaan konkret yang malah mempersulit tim:
+misal tim developer disuruh masukin data film baru yang harga sewanya normal (misal 4.99) lewat view film_murah (kayak di Q3). itu pasti langsung ditolak sama database karena melanggar CHECK OPTION atau pas mau input data rekap pendapatan (kayak di Q4), pasti error juga karena view yang pakai GROUP BY emang nggak bisa di-insert langsung. jadinya, developer bakal stuck, mau nggak mau mereka harus bikin trigger INSTEAD OF yang logikanya ribet, atau malah nekat bypass view dan akses tabel dasar langsung. padahal tujuan awal arsitekturnya kan biar aksesnya terpusat dan rapi, eh malah jadi penghambat workflow tim sendiri pas butuh fitur input data yang nggak sesuai sama kriteria view.
+
+
+
+
+## refleksi c - question and answer option
+
+**1. Kapan Trigger Per Baris Tetap Lebih Tepat Walaupun Lebih Lambat?**
+> Trigger per baris (FOR EACH ROW) tetap lebih tepat saat logika audit atau validasi memerlukan pemeriksaan konteks individual yang kompleks, pembacaan state dinamis eksternal per baris sebelum modifikasi, atau ketika variabel konteks baris (OLD dan NEW) perlu diproses melalui kode prosedural eksternal/APIs eksepsional per item.
+
+**2. Kemampuan yang Tidak Dimiliki Trigger Pernyataan:**
+> Trigger pernyataan tidak memiliki akses langsung ke variabel bawaan OLD dan NEW untuk mengevaluasi individual tuple secara langsung saat eksekusi berjalan baris demi baris, serta tidak dapat digunakan untuk membatalkan (cancel/abort) atau memodifikasi data baris spesifik sebelum disimpan (BEFORE FOR EACH ROW).
+
+**3.Mengapa Mengirim Surel Langsung dari Trigger Buruk Ketika Transaksi Di-rollback?**
+> Pengiriman surel bersifat non-transaksional (efek samping eksternal/out-of-band side effect). Jika trigger mengirim surel lalu operasi database berikutnya mengalami kegagalan dan mengalami ROLLBACK, perubahan data di database akan dibatalkan, namun surel sudah terlanjur terkirim. Hal ini menyebabkan disinkronisasi data di mana penerima surel mendapat notifikasi mengenai perubahan yang sebenarnya tidak pernah terjadi di dalam database.
+
+
+
+
+
+
+
+
+----
+
+## LANGKAH 3 · MATERIALIZED VIEW
+
+### Q5
+Query digunakan untuk menampilkan jumlah akses dan jumlah film unik berdasarkan bulan dan kanal.
+
+Waktu eksekusi: `Time: 2498.191 ms (00:02.498)`
+
+### Q6
+Query Q5 dibuat menjadi materialized view `lab4.ringkasan_akses` dengan `WITH NO DATA`. Pada pengujian ulang, materialized view sudah tersedia sehingga tidak dilakukan pembuatan ulang.
+
+Setelah refresh biasa, data berhasil dimuat.
+
+Waktu refresh: `2812.472 ms`
+
+### Q7
+Pada pengujian ulang, materialized view sudah memiliki index yang diperlukan sehingga `REFRESH MATERIALIZED VIEW CONCURRENTLY` berhasil dijalankan.
+
+Waktu refresh concurrently: `2633.745 ms`
+
+Refresh concurrently tetap memiliki proses tambahan untuk menjaga agar pembaca dapat mengakses materialized view selama refresh.
+
+### Q8
+Pada refresh concurrently, pembaca tetap dapat menjalankan query saat proses refresh berlangsung. Pada refresh biasa, pembaca dapat menunggu hingga proses refresh selesai.
+
+### Reflektif B
+Materialized view mempercepat laporan karena hasil query sudah disimpan, tapi datanya tidak selalu terbaru. Komprominya, laporan dapat ditetapkan memiliki batas kebasian, misalnya 15 menit, dengan refresh setiap 15 menit. Jika refresh gagal, gunakan hasil refresh terakhir yang berhasil dan lakukan percobaan ulang setelah masalah diperbaiki.
+
+
+---
+
+### Reflektif D
+**Aturan periode harga tidak tumpang tindih dapat ditulis sebagai trigger yang membaca tabel sebelum INSERT. Jelaskan mengapa trigger itu bisa gagal ketika dua transaksi berjalan bersamaan, sedangkan EXCLUDE tidak, dengan bahasa Anda sendiri.** 
+> Trigger BEFORE INSERT yang cek manual bisa kebobolan saat dua transaksi jalan bersamaan: keduanya sama-sama SELECT dulu buat cek tumpang tindih, tapi karena masing-masing belum lihat perubahan punya yang lain (belum commit), keduanya lolos pengecekan dan sama-sama berhasil insert — padahal harusnya bentrok. Ini race condition, karena ada jeda antara "cek" dan "insert" yang gak terlindungi.EXCLUDE gak kena masalah ini karena pengecekan dan penguncian jadi satu operasi atomik di level index GiST — begitu satu transaksi insert, baris yang bentrok langsung ketahan/gagal, gak ada celah waktu buat transaksi lain nyelip.
+
+
+## Reflektif E
+**Berapa lama jarak rilis yang Anda usulkan antara 0045 dan 0046? Bukti apa yang harus dikumpulkan sebelum berani menjalankan 0046, mengingat isinya tidak dapat dikembalikan sepenuhnya?**
+> Jarak yang kami usulin: minimal satu siklus rilis penuh (~1-2 minggu), soalnya 0046 ngehapus kolom rental_rate secara permanen dan .down.sql-nya cuma bisa balikin strukturnya, bukan datanya.
