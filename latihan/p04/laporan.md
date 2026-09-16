@@ -20,3 +20,4 @@ Materialized view dibuat dengan nama `lab4.ringkasan_akses` menggunakan `WITH NO
 ```text
 ERROR:  materialized view "ringkasan_akses" has not been populated
 HINT:  Use the REFRESH MATERIALIZED VIEW command
+
