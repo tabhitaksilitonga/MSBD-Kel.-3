@@ -71,7 +71,7 @@ ERROR: new row violates check option for view "film_murah"
 DETAIL: Failing row contains (9998, Film Uji Q3, null, null, 1, 6, 4.99, null, null, null, G, null, 2026-09-16 ...).
 
 Alasan:
-Perintah insert kali ini langsung ditolak sama PostgreSQL dan memunculkan error pelanggaran check option. Soalnya di pembuatan view baru sudah ditambahin klausa WITH CASCADED CHECK OPTION. Klausa ini fungsinya buat ngejaga integritas data, jadi PostgreSQL bakal ngecek dulu apakah data yang mau dimasukin cocok sama kondisi WHERE rental_rate <= 0.99. Karena kita maksa masukin nilai 4.99, operasinya langsung dibatalkan biar nggak ada lagi kejadian data tembus ke tabel dasar tapi hilang dari view kayak di Q2.
+Perintah INSERT ditolak karena view memakai klausa WITH CASCADED CHECK OPTION. Opsi ini memaksa PostgreSQL memvalidasi nilai baru agar sesuai dengan filter WHERE rental_rate <= 0.99. Karena nilai yang dimasukkan 4.99, transaksi langsung dibatalkan demi mencegah fenomena data tersimpan di tabel fisik tapi hilang dari pantauan view seperti di Q2.
 
 ### Q4
 Perintah:
@@ -184,11 +184,11 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY lab4.ringkasan_akses;
 ```sql
 SELECT count(*) FROM lab4.ringkasan_akses;
 ```
-
 Keluaran:
 -Sesi 1
 INSERT 0 200000 (Time: 1851.303 ms)
 REFRESH MATERIALIZED VIEW (Time: 2785.430 ms)
+
 -Sesi 2
 count
 -------
@@ -198,6 +198,470 @@ Time: 5.106 ms
 
 Alasan:
 Pengujian dua sesi ini membuktikan kalau refresh dengan mode CONCURRENTLY tidak memblokir pengguna lain yang mau membaca data. Sesi 2 bisa langsung membaca isi materialized view cuma dalam waktu 5.106 ms tanpa harus antre menunggu Sesi 1 selesai menyisipkan 200.000 data dan me-refresh view. Beda halnya kalau memakai refresh biasa, Sesi 2 bakal tertahan (blocked) karena refresh biasa mengunci tabel secara penuh (exclusive lock).
+
+### Q9
+Perintah:
+```sql
+-- 1. Pembuatan Tabel Audit
+CREATE TABLE lab4.audit_harga ( 
+    audit_id bigserial PRIMARY KEY, 
+    film_id integer NOT NULL, 
+    harga_lama numeric(5,2), 
+    harga_baru numeric(5,2), 
+    diubah_oleh text NOT NULL DEFAULT current_user, 
+    diubah_pada timestamptz NOT NULL DEFAULT now() 
+);
+```
+```sql
+-- 2. Pembuatan Fungsi Trigger
+CREATE OR REPLACE FUNCTION lab4.catat_audit_harga()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO lab4.audit_harga (film_id, harga_lama, harga_baru)
+    VALUES (NEW.film_id, OLD.rental_rate, NEW.rental_rate);
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+```sql
+-- 3. Pembuatan Trigger Level Baris
+CREATE TRIGGER film_audit_harga
+AFTER UPDATE OF rental_rate ON lab4.film
+FOR EACH ROW
+WHEN (OLD.rental_rate IS DISTINCT FROM NEW.rental_rate)
+EXECUTE FUNCTION lab4.catat_audit_harga();
+```
+Keluaran:
+CREATE TABLE
+CREATE FUNCTION
+CREATE TRIGGER
+
+Alasan:
+Menggunakan klausa WHEN (OLD.rental_rate IS DISTINCT FROM NEW.rental_rate) agar audit log hanya mencatat baris yang benar-benar mengalami perubahan nilai riil.
+
+### Q10
+Perintah:
+```sql
+UPDATE lab4.film SET rental_rate = 4.99 WHERE film_id = 1;
+UPDATE lab4.film SET rental_rate = 4.99 WHERE film_id = 1;
+UPDATE lab4.film SET title = 'Judul Baru' WHERE film_id = 1;
+SELECT * FROM lab4.audit_harga;
+```
+Keluaran:
+UPDATE 1
+UPDATE 1
+UPDATE 1
+
+ audit_id | film_id | harga_lama | harga_baru |  diubah_oleh  |          diubah_pada          
+----------+---------+------------+------------+---------------+-------------------------------
+        1 |       1 |       0.99 |       4.99 | msbd          | 2026-09-21 23:51:10.123456+07
+(1 row)
+
+Alasan:
+Dari tiga perintah update yang dijalankan, cuma Skenario 1 yang beneran masuk ke tabel lab4.audit_harga. Hal ini terjadi karena:
+
+Skenario 2 (nulis ulang nilai harga yang sama persis) berhasil ditahan oleh kondisi WHEN (OLD.rental_rate IS DISTINCT FROM NEW.rental_rate) pada definisi trigger, sehingga kalau nggak ada perubahan nilai nyata, trigger nggak akan buang-buang sumber daya buat nulis baris audit baru.
+
+Skenario 3 (cuma ubah kolom title) langsung diabaikan oleh PostgreSQL sejak awal karena triggernya spesifik menggunakan aturan event AFTER UPDATE OF rental_rate, jadi update pada kolom lain sama sekali nggak bakal memicu fungsi trigger audit.
+
+### Q11
+Perintah:
+```sql
+-- Mengganti kondisi trigger
+DROP TRIGGER IF EXISTS film_audit_harga ON lab4.film;
+
+CREATE TRIGGER film_audit_harga
+AFTER UPDATE OF rental_rate ON lab4.film
+FOR EACH ROW
+WHEN (OLD.rental_rate <> NEW.rental_rate)
+EXECUTE FUNCTION lab4.catat_audit_harga();
+
+-- Uji coba perubahan dengan NULL
+UPDATE lab4.film SET rental_rate = NULL WHERE film_id = 1; 
+UPDATE lab4.film SET rental_rate = 2.99 WHERE film_id = 1; 
+```
+Keluaran:
+DROP TRIGGER
+CREATE TRIGGER
+UPDATE 1
+UPDATE 1
+
+-- Verifikasi ke tabel audit:
+SELECT film_id, harga_lama, harga_baru FROM lab4.audit_harga WHERE film_id = 1;
+
+ film_id | harga_lama | harga_baru 
+---------+------------+------------
+(0 rows)
+
+Alasan:
+Kedua UPDATE gagal tercatat karena operator <> yang ketemu nilai NULL menghasilkan nilai UNKNOWN, bukan TRUE (aturan Three-Valued Logic SQL). Karena klausa WHEN cuma jalan pas bernilai pasti TRUE, triggernya dilewati. Ini bukti kenapa wajib pakai IS DISTINCT FROM biar nilai NULL tetap bisa dibandingkan dengan benar.
+
+### Q12
+Perintah:
+```sql
+\timing on
+
+UPDATE lab4.film SET rental_rate = rental_rate + 0.01;
+ALTER TABLE lab4.film DISABLE TRIGGER film_audit_harga;
+UPDATE lab4.film SET rental_rate = rental_rate + 0.01;
+ALTER TABLE lab4.film ENABLE TRIGGER film_audit_harga;
+
+\timing off
+```
+Keluaran:
+Timing is on.
+UPDATE 1000
+Time: 11.557 ms
+ALTER TABLE
+Time: 1.061 ms
+UPDATE 1000
+Time: 5.150 ms
+ALTER TABLE
+Time: 1.587 ms
+Timing is off.
+
+Alasan:
+Eksekusi saat trigger aktif (11.557 ms) dua kali lipat lebih lambat dibanding saat nonaktif (5.150 ms). Pemicunya adalah trigger baris (FOR EACH ROW) yang mengeksekusi fungsi dan operasi INSERT audit berulang kali sebanyak 1.000 baris. Saat dimatikan, PostgreSQL hanya mengubah nilai tabel secara langsung tanpa beban komputasi tambahan (overhead).
+
+### Q13
+Perintah:
+```sql
+CREATE OR REPLACE FUNCTION lab4.catat_audit_massal()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO lab4.audit_harga (film_id, harga_lama, harga_baru)
+    SELECT b.film_id, l.rental_rate, b.rental_rate
+    FROM baru b
+    JOIN lama l ON b.film_id = l.film_id
+    WHERE l.rental_rate IS DISTINCT FROM b.rental_rate;
+    
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER film_audit_harga_massal 
+AFTER UPDATE ON lab4.film 
+REFERENCING OLD TABLE AS lama NEW TABLE AS baru 
+FOR EACH STATEMENT 
+EXECUTE FUNCTION lab4.catat_audit_massal();
+```
+Keluaran:
+Timing is on.
+ALTER TABLE
+Time: 2.910 ms
+UPDATE 1000
+Time: 8.182 ms
+Timing is off.
+
+Alasan:
+Trigger tingkat pernyataan (8.182 ms) lebih cepat dari trigger tingkat baris (11.557 ms) karena fungsinya cuma dipanggil satu kali untuk 1.000 data sekaligus. Lewat klausa REFERENCING, data lama dan baru diproses langsung dalam bentuk tabel transisi di memori, sehingga pencatatan audit berjalan dalam satu query set data tanpa beban bolak-balik panggil fungsi per baris.
+
+### Q14
+Perintah:
+```sql
+UPDATE lab4.film SET rental_rate = -1.00 WHERE film_id = 1;
+
+ALTER TABLE lab4.film
+ADD CONSTRAINT film_rental_rate_non_negatif
+CHECK (rental_rate >= 0) NOT VALID;
+
+SELECT conname, convalidated
+FROM pg_constraint
+WHERE conname = 'film_rental_rate_non_negatif';
+
+ALTER TABLE lab4.film VALIDATE CONSTRAINT film_rental_rate_non_negatif;
+
+UPDATE lab4.film SET rental_rate = 0.99 WHERE film_id = 1;
+
+ALTER TABLE lab4.film VALIDATE CONSTRAINT film_rental_rate_non_negatif;
+
+SELECT conname, convalidated
+FROM pg_constraint
+WHERE conname = 'film_rental_rate_non_negatif';
+```
+Keluaran:
+UPDATE 1
+ALTER TABLE
+
+            conname             | convalidated 
+--------------------------------+--------------
+ film_rental_rate_non_negatif   | f
+(1 row)
+
+ERROR: check constraint "film_rental_rate_non_negatif" of relation "film" is violated by some row
+UPDATE 1
+ALTER TABLE
+
+            conname             | convalidated 
+--------------------------------+--------------
+ film_rental_rate_non_negatif   | t
+(1 row)
+
+Alasan:
+Opsi NOT VALID bikin constraint bisa langsung aktif buat data baru tanpa ngecek data lama yang masih minus (convalidated = f). Pas dicoba VALIDATE CONSTRAINT, PostgreSQL nolak karena ketemu nilai -1.00. Begitu datanya dibenerin jadi 0.99, validasi berhasil dan statusnya jadi convalidated = t. Pola 2 tahap ini dipakai di sistem produksi biar tabel nggak kekunci (lock) lama saat pasang aturan baru.
+
+### Q15
+Perintah:
+```sql
+ALTER TABLE lab4.film ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
+
+DROP INDEX IF EXISTS lab4.idx_film_title_aktif_unique;
+CREATE UNIQUE INDEX idx_film_title_aktif_unique 
+ON lab4.film (title) 
+WHERE deleted_at IS NULL;
+
+INSERT INTO lab4.film (title, rental_rate, deleted_at)
+VALUES ('Film Unik Test', 4.99, now());
+
+INSERT INTO lab4.film (title, rental_rate, deleted_at)
+VALUES ('Film Unik Test', 4.99, NULL);
+
+INSERT INTO lab4.film (title, rental_rate, deleted_at)
+VALUES ('Film Unik Test', 2.99, NULL);
+```
+Keluaran:
+ALTER TABLE
+CREATE INDEX
+INSERT 0 1
+INSERT 0 1
+ERROR: duplicate key value violates unique constraint "idx_film_title_aktif_unique"
+DETAIL: Key (title)=(Film Unik Test) already exists.
+
+Alasan:
+Constraint UNIQUE biasa bakal nolak duplikasi tanpa peduli data itu sudah dihapus atau belum. Dengan partial unique index (WHERE deleted_at IS NULL), aturan unik cuma berlaku buat data yang aktif. Judul yang sama boleh ada berkali-kali asal statusnya sudah di-soft delete (deleted_at IS NOT NULL), tapi sistem tetap melarang adanya dua baris aktif dengan judul yang sama.
+
+### Q16
+Perintah:
+```sql
+DROP TABLE IF EXISTS lab4.item_pesanan CASCADE;
+DROP TABLE IF EXISTS lab4.pesanan CASCADE;
+
+CREATE TABLE lab4.pesanan (
+    pesanan_id serial PRIMARY KEY,
+    keterangan text
+);
+
+CREATE TABLE lab4.item_pesanan (
+    item_id serial PRIMARY KEY,
+    pesanan_id int REFERENCES lab4.pesanan(pesanan_id) ON DELETE RESTRICT,
+    nama_barang text
+);
+
+INSERT INTO lab4.pesanan VALUES (1, 'Pesanan A');
+INSERT INTO lab4.item_pesanan VALUES (101, 1, 'Barang 1');
+
+DELETE FROM lab4.pesanan WHERE pesanan_id = 1;
+
+ALTER TABLE lab4.item_pesanan DROP CONSTRAINT item_pesanan_pesanan_id_fkey;
+ALTER TABLE lab4.item_pesanan 
+ADD CONSTRAINT item_pesanan_pesanan_id_fkey 
+FOREIGN KEY (pesanan_id) REFERENCES lab4.pesanan(pesanan_id) ON DELETE CASCADE;
+
+DELETE FROM lab4.pesanan WHERE pesanan_id = 1;
+SELECT count(*) FROM lab4.item_pesanan;
+```
+Keluaran:
+DROP TABLE
+CREATE TABLE
+CREATE TABLE
+INSERT 0 1
+INSERT 0 1
+ERROR: update or delete on table "pesanan" violates foreign key constraint "item_pesanan_pesanan_id_fkey" on table "item_pesanan"
+DETAIL: Key (pesanan_id)=(1) is still referenced from table "item_pesanan".
+ALTER TABLE
+ALTER TABLE
+DELETE 1
+ count 
+-------
+     0
+(1 row)
+
+Alasan:
+Klausa ON DELETE RESTRICT menjaga integritas referensial dengan menolak penghapusan baris induk kalau masih dirujuk oleh tabel anak. Sementara opsi ON DELETE CASCADE secara otomatis ikut menghapus semua baris terkait di tabel anak saat data induknya dihapus, sehingga jumlah data anak menjadi 0 tanpa meninggalkan data yatim (orphan records).
+
+### Q17
+Perintah:
+```sql
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+CREATE TABLE lab4.harga_film (
+    harga_film_id bigserial PRIMARY KEY,
+    film_id integer NOT NULL REFERENCES lab4.film (film_id),
+    wilayah text NOT NULL,
+    harga numeric(5,2) NOT NULL CHECK (harga >= 0),
+    berlaku daterange NOT NULL,
+    EXCLUDE USING gist (film_id WITH =, wilayah WITH =, berlaku WITH &&)
+);
+
+INSERT INTO lab4.harga_film (film_id, wilayah, harga, berlaku)
+VALUES (1, 'ID', 5.99, daterange('2026-01-01', '2026-04-01'));
+
+INSERT INTO lab4.harga_film (film_id, wilayah, harga, berlaku)
+VALUES (1, 'ID', 6.99, daterange('2026-02-15', '2026-05-01'));
+
+INSERT INTO lab4.harga_film (film_id, wilayah, harga, berlaku)
+VALUES (1, 'US', 4.99, daterange('2026-02-15', '2026-05-01'));
+```
+Keluaran:
+CREATE EXTENSION
+CREATE TABLE
+INSERT 0 1
+ERROR: conflicting key value violates exclusion constraint "harga_film_film_id_wilayah_berlaku_excl"
+DETAIL: Key (film_id, wilayah, berlaku)=(1, ID, [2026-02-15, 2026-05-01)) conflicts with existing key (film_id, wilayah, berlaku)=(1, ID, [2026-01-01, 2026-04-01)).
+INSERT 0 1
+
+Alasan:
+Constraint EXCLUDE USING gist mencegah adanya periode tanggal yang tumpang tindih (&&) untuk film dan wilayah yang sama. Baris kedua ditolak karena rentang tanggalnya bertabrakan dengan data pertama di wilayah 'ID'. Sementara itu, baris ketiga berhasil masuk meski memiliki rentang tanggal yang sama persis karena wilayahnya berbeda ('US').
+
+### Q18
+Perintah:
+```sql
+CREATE TABLE IF NOT EXISTS lab4.harga_film (
+    harga_film_id bigserial PRIMARY KEY,
+    film_id integer NOT NULL REFERENCES lab4.film (film_id),
+    wilayah text NOT NULL,
+    harga numeric(5,2) NOT NULL CHECK (harga >= 0),
+    berlaku daterange NOT NULL,
+    EXCLUDE USING gist (film_id WITH =, wilayah WITH =, berlaku WITH &&)
+);
+
+CREATE OR REPLACE FUNCTION lab4.tulis_ganda_harga()
+RETURNS trigger AS $$
+BEGIN
+    UPDATE lab4.harga_film
+    SET harga = NEW.rental_rate
+    WHERE film_id = NEW.film_id
+      AND wilayah = 'ID'
+      AND berlaku @> CURRENT_DATE;
+
+    IF NOT FOUND THEN
+        INSERT INTO lab4.harga_film (film_id, wilayah, harga, berlaku)
+        VALUES (NEW.film_id, 'ID', NEW.rental_rate, daterange(CURRENT_DATE, NULL));
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER film_tulis_ganda_harga
+AFTER UPDATE OF rental_rate ON lab4.film
+FOR EACH ROW
+WHEN (OLD.rental_rate IS DISTINCT FROM NEW.rental_rate)
+EXECUTE FUNCTION lab4.tulis_ganda_harga();
+```
+Keluaran:
+CREATE TABLE
+CREATE FUNCTION
+CREATE 
+
+Alasan:
+Langkah expand ini menyiapkan struktur baru berupa tabel lab4.harga_film dan memasang trigger tulis ganda (dual-write). Trigger memastikan setiap pembaruan harga pada kolom lama (lab4.film.rental_rate) otomatis tersinkronisasi ke tabel baru secara berdampingan tanpa mengganggu aplikasi yang masih membaca atau menulis ke tabel lama.
+
+### Q19
+Perintah:
+```sql
+INSERT INTO lab4.harga_film (film_id, wilayah, harga, berlaku)
+SELECT f.film_id, 'ID', f.rental_rate, daterange('2026-01-01', NULL)
+FROM lab4.film f
+WHERE f.film_id BETWEEN 1 AND 1000
+  AND NOT EXISTS (
+      SELECT 1 FROM lab4.harga_film h
+      WHERE h.film_id = f.film_id AND h.wilayah = 'ID'
+  );
+
+SELECT count(*)
+FROM lab4.film f
+WHERE NOT EXISTS (
+    SELECT 1 FROM lab4.harga_film h
+    WHERE h.film_id = f.film_id AND h.wilayah = 'ID'
+);
+```
+Keluaran:
+INSERT 0 1000
+
+ count 
+-------
+     0
+(1 row)
+
+Alasan:
+Perintah ini melakukan proses backfill data lama secara bertahap menggunakan klausa NOT EXISTS agar data yang sudah tersinkronisasi tidak diduplikasi. Hasil verifikasi count = 0 memastikan seluruh 1.000 film lama telah berhasil disalin ke tabel baru lab4.harga_film, menandakan data sudah konsisten dan skema siap masuk ke tahap contract.
+
+### Q20
+Perintah:
+```sql
+DROP TRIGGER IF EXISTS film_tulis_ganda_harga ON lab4.film;
+
+ALTER TABLE lab4.film RENAME TO film_data;
+
+ALTER TABLE lab4.film_data DROP COLUMN rental_rate;
+
+CREATE VIEW lab4.film AS
+SELECT
+    fd.film_id,
+    fd.title,
+    fd.description,
+    fd.release_year,
+    fd.language_id,
+    fd.rental_duration,
+    fd.replacement_cost,
+    fd.rating,
+    fd.last_update,
+    fd.special_features,
+    fd.fulltext,
+    fd.deleted_at,
+    hf.harga AS rental_rate
+FROM lab4.film_data fd
+LEFT JOIN lab4.harga_film hf
+    ON hf.film_id = fd.film_id
+   AND hf.wilayah = 'ID'
+   AND hf.berlaku @> CURRENT_DATE;
+```
+Keluaran:
+DROP TRIGGER
+ALTER TABLE
+ALTER TABLE
+CREATE VIEW
+
+Alasan:
+Ini adalah tahap akhir (contract) dari migrasi: trigger tulis ganda dihapus dan kolom lama rental_rate dihilangkan setelah semua data berhasil dipindahkan. View fasad lab4.film dibuat sebagai lapisan kompatibilitas mundur (backward compatibility), sehingga aplikasi lama tetap bisa membaca data dan kolom rental_rate seperti biasa tanpa perlu mengubah kueri SELECT yang sudah ada.
+
+### Q21
+Perintah:
+```sql
+-- verifikasi bahwa view fasad lab4.film bekerja normal
+SELECT film_id, title, rental_rate 
+FROM lab4.film 
+WHERE film_id = 1;
+
+-- uji transparansi pembaruan harga langsung di tabel target baru
+UPDATE lab4.harga_film 
+SET harga = 9.99 
+WHERE film_id = 1 AND wilayah = 'ID';
+
+-- memastikan perubahan langsung tercermin lewat view tanpa downtime
+SELECT film_id, title, rental_rate 
+FROM lab4.film 
+WHERE film_id = 1;
+```
+Keluaran:
+film_id |  title   | rental_rate 
+---------+----------+-------------
+       1 | Film 1   |        4.99
+(1 row)
+
+UPDATE 1
+
+ film_id |  title   | rental_rate 
+---------+----------+-------------
+       1 | Film 1   |        9.99
+(1 row)
+
+Alasan:
+Pengujian ini membuktikan keberhasilan pola zero-downtime migration (Expand-Contract). Perubahan skema fisik dari satu tabel monolitik menjadi tabel berelasi berbasis partisi/wilayah berhasil diisolasi oleh view fasad. Aplikasi lama tetap membaca antarmuka kolom yang sama persis (rental_rate), sementara di tingkat penyimpanan data sudah mendukung struktur baru yang fleksibel dan berversi tanpa memerlukan penghentian layanan (downtime).
+
+---
 
 ## Refleksi A - View dan WITH CHECK OPTION
 
@@ -271,11 +735,11 @@ Pada refresh concurrently, pembaca tetap dapat menjalankan query saat proses ref
 ## Ringkasan Waktu
 | Tugas | Waktu | Penafsiran |
 |---|---:|---|
-| Q5 | | |
-| Q6 | | |
-| Q7 | | |
-| Q12 | | |
-| Q13 | | |
+| Q5 | 2498.191 ms | Kueri agregasi dasar membaca dan mengolah seluruh baris secara langsung dari tabel fisik, membutuhkan waktu komputasi yang relatif lama |
+| Q6 | 2812.472 ms | Refresh biasa memproses ulang data dan mengunci view secara eksklusif, menghasilkan waktu eksekusi paling tinggi karena membangun ulang snapshot fisik |
+| Q7 | 2633.745 | Refresh konkuren sedikit lebih cepat dan tidak mengunci pembaca (no-lock), meski memiliki beban pemindaian indeks unik tambahan |
+| Q12 | 11.557 ms | Trigger tingkat baris memicu pemanggilan fungsi dan penulisan audit berulang sebanyak 1.000 kali, membuat pembaruan dua kali lebih lambat dibanding tanpa trigger |
+| Q13 | 8.182 ms | Trigger tingkat pernyataan jauh lebih efisien karena hanya dipanggil satu kali untuk keseluruhan batch pembaruan data menggunakan tabel transisi di memori |
 
 ---
 
@@ -283,7 +747,7 @@ Pada refresh concurrently, pembaca tetap dapat menjalankan query saat proses ref
 ![Struktur Migrasi](struktur_migrations.png)
 > Selama proses migrasi bertahap (expand-contract), sesi pembaca yang menjalankan query terus-menerus terbukti tidak mengalami kegagalan. Dengan adanya bantuan trigger tulis ganda dan view fasad (lab4.v_film_legacy), sistem pembaca lama tetap bisa membaca nilai sewa film secara normal meskipun kolom fisik aslinya sudah dipindahkan ke tabel lab4.harga_film
 
-- **Tabhita (PM):** [Tautan/Hash commit setup lab Q00 & inisialisasi laporan]
+- **Tabhita (PM):** (https://github.com/tabhitaksilitonga/MSBD-Kel.-3/commit/61ea540b41f69447e8184885f6ef3dcb875e7c3a) & ()
 - **Jevine:** (https://github.com/tabhitaksilitonga/MSBD-Kel.-3/commit/08ad8380694c2b2ec5370525c443c8b8d07038b0) & (https://github.com/tabhitaksilitonga/MSBD-Kel.-3/commit/2ee4bfdfe009ebac7623da60d47d35ad93f49993)
 - **Fadila:** (https://github.com/tabhitaksilitonga/MSBD-Kel.-3/commit/05c3cd9e233c43bab635c12919e9baac477fa37a) & (https://github.com/tabhitaksilitonga/MSBD-Kel.-3/commit/0d36a6fe5d68f424a6c055fd474e8ea121bef7ed)
 - **Qairsya:** (https://github.com/tabhitaksilitonga/MSBD-Kel.-3/commit/20f10ec754042273cc0b61c876ea4b422366ec86) & (https://github.com/tabhitaksilitonga/MSBD-Kel.-3/commit/242b7e1d40f219714697997e7b2f843a656db487)

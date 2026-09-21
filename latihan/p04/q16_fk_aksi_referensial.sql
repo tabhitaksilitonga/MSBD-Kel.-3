@@ -1,32 +1,26 @@
-CREATE TABLE IF NOT EXISTS lab4.harga_film (
-    harga_film_id bigserial PRIMARY KEY,
-    film_id integer NOT NULL REFERENCES lab4.film (film_id),
-    wilayah text NOT NULL,
-    harga numeric(5,2) NOT NULL CHECK (harga >= 0),
-    berlaku daterange NOT NULL,
-    EXCLUDE USING gist (film_id WITH =, wilayah WITH =, berlaku WITH &&)
+DROP TABLE IF EXISTS lab4.item_pesanan CASCADE;
+DROP TABLE IF EXISTS lab4.pesanan CASCADE;
+
+CREATE TABLE lab4.pesanan (
+    pesanan_id serial PRIMARY KEY,
+    keterangan text
 );
 
-CREATE OR REPLACE FUNCTION lab4.tulis_ganda_harga()
-RETURNS trigger AS $$
-BEGIN
-    UPDATE lab4.harga_film
-    SET harga = NEW.rental_rate
-    WHERE film_id = NEW.film_id
-      AND wilayah = 'ID'
-      AND berlaku @> CURRENT_DATE;
+CREATE TABLE lab4.item_pesanan (
+    item_id serial PRIMARY KEY,
+    pesanan_id int REFERENCES lab4.pesanan(pesanan_id) ON DELETE RESTRICT,
+    nama_barang text
+);
 
-    IF NOT FOUND THEN
-        INSERT INTO lab4.harga_film (film_id, wilayah, harga, berlaku)
-        VALUES (NEW.film_id, 'ID', NEW.rental_rate, daterange(CURRENT_DATE, NULL));
-    END IF;
+INSERT INTO lab4.pesanan VALUES (1, 'Pesanan A');
+INSERT INTO lab4.item_pesanan VALUES (101, 1, 'Barang 1');
 
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+DELETE FROM lab4.pesanan WHERE pesanan_id = 1;
 
-CREATE TRIGGER film_tulis_ganda_harga
-AFTER UPDATE OF rental_rate ON lab4.film
-FOR EACH ROW
-WHEN (OLD.rental_rate IS DISTINCT FROM NEW.rental_rate)
-EXECUTE FUNCTION lab4.tulis_ganda_harga();
+ALTER TABLE lab4.item_pesanan DROP CONSTRAINT item_pesanan_pesanan_id_fkey;
+ALTER TABLE lab4.item_pesanan 
+ADD CONSTRAINT item_pesanan_pesanan_id_fkey 
+FOREIGN KEY (pesanan_id) REFERENCES lab4.pesanan(pesanan_id) ON DELETE CASCADE;
+
+DELETE FROM lab4.pesanan WHERE pesanan_id = 1;
+SELECT count(*) FROM lab4.item_pesanan;
