@@ -189,7 +189,6 @@ Keluaran:
 -Sesi 1
 INSERT 0 200000 (Time: 1851.303 ms)
 REFRESH MATERIALIZED VIEW (Time: 2785.430 ms)
-
 -Sesi 2
 count
 -------
@@ -214,20 +213,7 @@ misal tim developer disuruh masukin data film baru yang harga sewanya normal (mi
 
 ---
 
-## Refleksi C - Trigger Audit
-
-**1. Kapan Trigger Per Baris Tetap Lebih Tepat Walaupun Lebih Lambat?**
-> Trigger per baris (FOR EACH ROW) tetap lebih tepat saat logika audit atau validasi memerlukan pemeriksaan konteks individual yang kompleks, pembacaan state dinamis eksternal per baris sebelum modifikasi, atau ketika variabel konteks baris (OLD dan NEW) perlu diproses melalui kode prosedural eksternal/APIs eksepsional per item.
-
-**2. Kemampuan yang Tidak Dimiliki Trigger Pernyataan:**
-> Trigger pernyataan tidak memiliki akses langsung ke variabel bawaan OLD dan NEW untuk mengevaluasi individual tuple secara langsung saat eksekusi berjalan baris demi baris, serta tidak dapat digunakan untuk membatalkan (cancel/abort) atau memodifikasi data baris spesifik sebelum disimpan (BEFORE FOR EACH ROW).
-
-**3.Mengapa Mengirim Surel Langsung dari Trigger Buruk Ketika Transaksi Di-rollback?**
-> Pengiriman surel bersifat non-transaksional (efek samping eksternal/out-of-band side effect). Jika trigger mengirim surel lalu operasi database berikutnya mengalami kegagalan dan mengalami ROLLBACK, perubahan data di database akan dibatalkan, namun surel sudah terlanjur terkirim. Hal ini menyebabkan disinkronisasi data di mana penerima surel mendapat notifikasi mengenai perubahan yang sebenarnya tidak pernah terjadi di dalam database.
-
----
-
-## Refleksi C - Materialized View
+## Refleksi B - Materialized View
 
 **1. Tim keuangan menginginkan laporan yang selalu mutakhir sekaligus selalu cepat. Jelaskan trade-off materialized view dan usulkan kompromi konkret: batas kebasian, jadwal refresh, dan tindakan saat refresh gagal di tengah jalan.**
 > Materialized view mempercepat laporan karena hasil query sudah disimpan, tapi datanya tidak selalu terbaru. Komprominya, laporan dapat ditetapkan memiliki batas kebasian, misalnya 15 menit, dengan refresh setiap 15 menit. Jika refresh gagal, gunakan hasil refresh terakhir yang berhasil dan lakukan percobaan ulang setelah masalah diperbaiki.
@@ -257,7 +243,20 @@ Pada refresh concurrently, pembaca tetap dapat menjalankan query saat proses ref
 
 ---
 
-### Reflektif D
+## Refleksi C - Trigger Audit
+
+**1. Kapan Trigger Per Baris Tetap Lebih Tepat Walaupun Lebih Lambat?**
+> Trigger per baris (FOR EACH ROW) tetap lebih tepat saat logika audit atau validasi memerlukan pemeriksaan konteks individual yang kompleks, pembacaan state dinamis eksternal per baris sebelum modifikasi, atau ketika variabel konteks baris (OLD dan NEW) perlu diproses melalui kode prosedural eksternal/APIs eksepsional per item.
+
+**2. Kemampuan yang Tidak Dimiliki Trigger Pernyataan:**
+> Trigger pernyataan tidak memiliki akses langsung ke variabel bawaan OLD dan NEW untuk mengevaluasi individual tuple secara langsung saat eksekusi berjalan baris demi baris, serta tidak dapat digunakan untuk membatalkan (cancel/abort) atau memodifikasi data baris spesifik sebelum disimpan (BEFORE FOR EACH ROW).
+
+**3.Mengapa Mengirim Surel Langsung dari Trigger Buruk Ketika Transaksi Di-rollback?**
+> Pengiriman surel bersifat non-transaksional (efek samping eksternal/out-of-band side effect). Jika trigger mengirim surel lalu operasi database berikutnya mengalami kegagalan dan mengalami ROLLBACK, perubahan data di database akan dibatalkan, namun surel sudah terlanjur terkirim. Hal ini menyebabkan disinkronisasi data di mana penerima surel mendapat notifikasi mengenai perubahan yang sebenarnya tidak pernah terjadi di dalam database.
+
+---
+
+## Reflektif D
 **Aturan periode harga tidak tumpang tindih dapat ditulis sebagai trigger yang membaca tabel sebelum INSERT. Jelaskan mengapa trigger itu bisa gagal ketika dua transaksi berjalan bersamaan, sedangkan EXCLUDE tidak, dengan bahasa Anda sendiri.** 
 > Trigger BEFORE INSERT yang cek manual bisa kebobolan saat dua transaksi jalan bersamaan: keduanya sama-sama SELECT dulu buat cek tumpang tindih, tapi karena masing-masing belum lihat perubahan punya yang lain (belum commit), keduanya lolos pengecekan dan sama-sama berhasil insert — padahal harusnya bentrok. Ini race condition, karena ada jeda antara "cek" dan "insert" yang gak terlindungi.EXCLUDE gak kena masalah ini karena pengecekan dan penguncian jadi satu operasi atomik di level index GiST — begitu satu transaksi insert, baris yang bentrok langsung ketahan/gagal, gak ada celah waktu buat transaksi lain nyelip.
 
