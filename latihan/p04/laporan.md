@@ -3,7 +3,7 @@
 ## Identitas Kelompok
 | Nama | NIM | Kontribusi | Commit |
 | :--- | :--- | :--- | :--- |
-| Tabhita Kristy SIlitonga | 251402023 | Project Manager, Setup Q00, Finalisasi laporan & readme | ab2e387 |
+| Tabhita Kristy SIlitonga | 251402023 | Project Manager, Setup Q00, Finalisasi laporan & readme | 277c52c |
 | Jevine Jeje Zakarias Simanjuntak | 251402085 | Langkah 2 (Q01-Q04) View & WITH CHECK OPTION, Refleksi A | 2ee4bfd |
 | Fadila Lisma Sari | 251402117 | Langkah 3 (Q05-Q08) Materialized View & Concurrent Refresh, Refleksi B | 0d36a6f |
 | Qairsya Naurel ein Yaliki | 251402120 | Langkah 4 (Q09-Q13) Trigger Audit Baris & Pernyataan, Refleksi C | 9bb7819 |
@@ -747,7 +747,7 @@ Pada refresh concurrently, pembaca tetap dapat menjalankan query saat proses ref
 ![Struktur Migrasi](struktur_migrations.png)
 > Selama proses migrasi bertahap (expand-contract), sesi pembaca yang menjalankan query terus-menerus terbukti tidak mengalami kegagalan. Dengan adanya bantuan trigger tulis ganda dan view fasad (lab4.v_film_legacy), sistem pembaca lama tetap bisa membaca nilai sewa film secara normal meskipun kolom fisik aslinya sudah dipindahkan ke tabel lab4.harga_film
 
-- **Tabhita (PM):** (https://github.com/tabhitaksilitonga/MSBD-Kel.-3/commit/61ea540b41f69447e8184885f6ef3dcb875e7c3a) & ()
+- **Tabhita (PM):** (https://github.com/tabhitaksilitonga/MSBD-Kel.-3/commit/61ea540b41f69447e8184885f6ef3dcb875e7c3a) & (https://github.com/tabhitaksilitonga/MSBD-Kel.-3/commit/277c52c89cf344837662ca5a9b9cdc4c9f3874c9)
 - **Jevine:** (https://github.com/tabhitaksilitonga/MSBD-Kel.-3/commit/08ad8380694c2b2ec5370525c443c8b8d07038b0) & (https://github.com/tabhitaksilitonga/MSBD-Kel.-3/commit/2ee4bfdfe009ebac7623da60d47d35ad93f49993)
 - **Fadila:** (https://github.com/tabhitaksilitonga/MSBD-Kel.-3/commit/05c3cd9e233c43bab635c12919e9baac477fa37a) & (https://github.com/tabhitaksilitonga/MSBD-Kel.-3/commit/0d36a6fe5d68f424a6c055fd474e8ea121bef7ed)
 - **Qairsya:** (https://github.com/tabhitaksilitonga/MSBD-Kel.-3/commit/20f10ec754042273cc0b61c876ea4b422366ec86) & (https://github.com/tabhitaksilitonga/MSBD-Kel.-3/commit/242b7e1d40f219714697997e7b2f843a656db487)
