@@ -118,3 +118,9 @@ sebagai teks dari data JSONB.
 Saya memilih ags untuk dianalisis. Menurut saya, tags sebaiknya tetap disimpan dalam bentuk array pada kolom `tags` karena satu rental dapat memiliki beberapa tag dan tag tersebut hanya berfungsi sebagai informasi tambahan. Dengan array, beberapa tag dapat disimpan dalam satu baris tanpa membutuhkan tabel tambahan.
 
 Namun, keputusan tersebut dapat berubah jika kebutuhan bisnis menjadi lebih kompleks. Misalnya, jika bisnis membutuhkan pertanyaan seperti “Berapa banyak rental yang menggunakan setiap tag dan bagaimana penggunaan tag tersebut berubah setiap bulan?”, maka tags lebih tepat dipindahkan ke tabel terpisah agar setiap tag dapat dikelola, dihitung, dan dianalisis dengan lebih mudah.
+
+
+## reflektif c
+Soal: Bandingkan rollback Q3 yang dipicu basis data dan Q13 yang dipicu Python. Apa persamaannya, dan apa satu hal yang hanya dapat dilakukan oleh sisi aplikasi?
+Jawaban: Persamaannya, keduanya membuktikan sebuah transaksi yang belum di-COMMIT tidak pernah menyisakan perubahan sebagian (partial write). Di Q3, PostgreSQL sendiri yang menolak karena amount melanggar domain positive_amount, jadi seluruh transaksi (termasuk INSERT rental_tx yang sudah berjalan) dibatalkan otomatis oleh server. Di Q13, kegagalannya bukan dari basis data (procedure-nya sukses tanpa galat SQL) — kegagalannya dari logika Python (RuntimeError) sebelum blok with conn sempat commit, sehingga psycopg yang melakukan ROLLBACK otomatis.
+Satu hal yang hanya bisa dilakukan sisi aplikasi: membatalkan transaksi karena alasan yang sama sekali tidak diketahui basis data — misalnya API eksternal gagal, validasi bisnis tambahan, timeout, atau keputusan user membatalkan proses. Basis data tidak tahu apa-apa soal RuntimeError kita; kalau hanya mengandalkan SQL, statement itu tetap valid dan akan ikut ter-commit begitu saja.
