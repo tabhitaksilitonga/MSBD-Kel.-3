@@ -625,8 +625,9 @@ atau struktur tabel yang sebenarnya.
 
 ---
 
-## Di Mana Aturan Itu Tinggal
+## Di Mana Aturan Itu Tinggal 
 | Aturan | Lapisan | Risiko bila dipindahkan | Bukti |
+|---|---|---|---|
 | Validasi tipe & format input dasar (misal: ID harus positif, format email/status) | API / DTO (Pydantic) | Bila dipindahkan ke Database saja: query tidak valid tetap membebani network trip dan koneksi pool sebelum akhirnya ditolak. Bila hanya di Aplikasi internal: payload cacat dari klien luar tidak tersaring di gerbang awal | File `lab5_api.py` (skema `RentalCreateRequest` dengan Field(gt=0) dan regex status) |
 | Integritas referensial dan konsistensi data (Foreign Key, Domain nilai positif, Enum state) | Database (PostgreSQL) | RBila dipindahkan hanya ke Aplikasi/API: data berpotensi korup jika ada akses langsung lewat psql, skrip migrasi, atau layanan lain yang bypass validasi aplikasi (terjadi orphan records) | File `q05_exception_fk.sql` (blok `EXCEPTION WHEN foreign_key_violation`), `q06_domain_positive_amount.sql`, dan `q07_enum_status.sql` |
 | Batas transaksi atomik sewa & pembayaran (multi-step transaction) | Stored Procedure / Driver | Bila dipindahkan ke API tanpa transaksi ketat: risiko transaksi menggantung atau inconsistent state jika API crash di tengah jalan sebelum payment tercatat | File `q02_process_rental.sql`, `q03_buktikan_rollback.sql`, dan pengujian `test_q4` pada driver |
