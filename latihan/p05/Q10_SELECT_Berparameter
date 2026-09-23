@@ -1,0 +1,14 @@
+def q10_select_parameterized():
+    print("\n--- Q10: SELECT Berparameter ---")
+    with psycopg.connect(DSN) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT customer_id, first_name, last_name "
+                "FROM public.customer WHERE last_name = %s",
+                ("Smith",),
+            )
+            rows = cur.fetchall()
+            for row in rows:
+                print(row)
+            print(f"Jumlah baris: {len(rows)}")
+    return rows
