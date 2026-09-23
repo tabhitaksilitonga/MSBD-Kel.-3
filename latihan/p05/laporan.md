@@ -3,7 +3,7 @@
 ## Identitas Kelompok
 | Nama | NIM | Kontribusi | Commit |
 | :--- | :--- | :--- | :--- |
-| Tabhita Kristy SIlitonga | 251402023 | Project Manager, Setup Q00, Verifikasi lingkungan, dan Finalisasi laporan & readme | 277c52c |
+| Tabhita Kristy SIlitonga | 251402023 | Project Manager, Setup Q00, Verifikasi lingkungan, dan Finalisasi laporan & readme | 4d55355 |
 | Jevine Jeje Zakarias Simanjuntak | 251402085 | Q01–Q05: PL/pgSQL Function, Stored Procedure & Transaction Control, dan Reflektif A | d751abb |
 | Fadila Lisma Sari | 251402117 | Q06–Q09: PostgreSQL Types (Domain, Enum, Array, & JSONB), dan Reflektif B & D | f774666 |
 | Qairsya Naurel ein Yaliki | 251402120 | Q10–Q15: psycopg Driver, Sanitasi Query, Connection Pool & Idle Transaction, dan Reflektif C | 9bb50e3 |
@@ -627,18 +627,26 @@ atau struktur tabel yang sebenarnya.
 
 ## Di Mana Aturan Itu Tinggal
 | Aturan | Lapisan | Risiko bila dipindahkan | Bukti |
-|---|---|---|---|
-
+| Validasi tipe & format input dasar (misal: ID harus positif, format email/status) | API / DTO (Pydantic) | Bila dipindahkan ke Database saja: query tidak valid tetap membebani network trip dan koneksi pool sebelum akhirnya ditolak. Bila hanya di Aplikasi internal: payload cacat dari klien luar tidak tersaring di gerbang awal | File `lab5_api.py` (skema `RentalCreateRequest` dengan Field(gt=0) dan regex status) |
+| Integritas referensial dan konsistensi data (Foreign Key, Domain nilai positif, Enum state) | Database (PostgreSQL) | RBila dipindahkan hanya ke Aplikasi/API: data berpotensi korup jika ada akses langsung lewat psql, skrip migrasi, atau layanan lain yang bypass validasi aplikasi (terjadi orphan records) | File `q05_exception_fk.sql` (blok `EXCEPTION WHEN foreign_key_violation`), `q06_domain_positive_amount.sql`, dan `q07_enum_status.sql` |
+| Batas transaksi atomik sewa & pembayaran (multi-step transaction) | Stored Procedure / Driver | Bila dipindahkan ke API tanpa transaksi ketat: risiko transaksi menggantung atau inconsistent state jika API crash di tengah jalan sebelum payment tercatat | File `q02_process_rental.sql`, `q03_buktikan_rollback.sql`, dan pengujian `test_q4` pada driver |
+| Sanitasi dan pencegahan injeksi SQL | LapisDriver Database (`psycopg`)an | Bila dipindahkan ke manipulasi string manual di level aplikasi: rentan fatal terhadap serangan SQL Injection bila programmer lupa melakukan escaping karakter khusus | File `q11_uji_injeksi.py` dan `q12_Identifier_dan_allow-list.py` (eksekusi berparameter `%s` dan modul `sql.Identifier`) |
 ---
 
 ## Ringkasan N+1
-| Q17 | Q18 | Q19 | Penafsiran |
-| 11 | 2 | 1 | Pada Q17 terjadi masalah N+1 (lazy loading) di mana 1 query awal mengambil 10 baris customer, lalu diikuti 10 query terpisah untuk mengambil data relasi rental masing-masing customer (total 11 statement). 
-Masalah ini dioptimasi pada Q18 menggunakan selectinload yang memisahkan pengambilan relasi ke dalam 1 query tambahan berbasis klausa IN (total 2 statement). 
-Pada Q19, joinedload menyatukan kedua entitas menggunakan klausul LEFT OUTER JOIN sehingga seluruh data terambil dalam 1 statement tunggal, membuktikan pemilihan strategi eager loading mampu mengeliminasi latensi round-trip basis data. |
+> Pada Q17, terjadi masalah N+1 karena program mengambil 10 data customer dalam satu query, kemudian setiap customer menjalankan query tambahan untuk mengambil data rental. Dengan demikian, total statement yang dihasilkan adalah 11, yaitu 1 query utama ditambah 10 query untuk masing-masing customer.
+
+> Pada Q18, masalah tersebut diperbaiki menggunakan `selectinload`, sehingga data customer diambil dalam satu query dan seluruh data rental yang terkait diambil dalam satu query tambahan. Total statement menjadi 2.
+
+> Pada Q19 digunakan `joinedload` yang mengambil data customer dan rental melalui JOIN dalam satu statement SQL, sehingga total statement menjadi 1. Dari hasil tersebut dapat dilihat bahwa penggunaan strategi loading yang tepat dapat mengurangi jumlah query dan menghindari masalah N+1.
 
 ---
 
 ## Penggunaan AI dan Verifikasi
 
 Untuk latihan ini, kami menggunakan AI sebagai alat diskusi untuk membantu kami dalam pemahaman materi dan tugasnya, serta membantu proses debugging. Disini AI membantu kami dalam konfigurasi *environment* di sistem operasi windows, seperti aktivasi *virtual environment* python di git bash/terminal dan perbaikan sintaks operator saat instalasi pustaka melalui pip. Kami juga berdiskusi dengan AI ketika mengeksekusi skrip ke dalam kontainer docker serta menganalisis pesan galat yang muncul, khususnya saat memahami alasan driver `psycopg` menolak perintah COMMIT di dalam *procedure* (galat *invalid transaction termination* pada Q04) dan memastikan blok penanganan *foreign key violation* pada Q05 sudah bekerja sesuai skenario. Selain itu, penjelasan AI membantu kami mengonfirmasi pemahaman terkait analisis N+1 pada SQLAlchemy serta alur *connection pool* di FastAPI. Seluruh yang kami dapat dari ai tidak kami copas, kami selalu run ulang setiap kode di terminal secara mandiri, memastikan kesesuaiannya dengan ketentuan di kelas usu, dan memvalidasi langsung luaran yang dihasilkan sebelum dimasukkan ke dalam laporan ini.
+
+---
+
+## Tautan Pull Request
+(https://github.com/tabhitaksilitonga/MSBD-Kel.-3/pull/4)
