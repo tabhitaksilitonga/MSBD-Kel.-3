@@ -4,8 +4,7 @@ import enum
 from sqlalchemy import String, Integer, BigInteger, Numeric, DateTime, ForeignKey, Enum, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, Session
 
-# GANTI DENGAN DSN (Gunakan postgresql+psycopg untuk SQLAlchemy)
-DSN = "postgresql+psycopg://postgres:postgres@localhost:5432/sakila"
+DSN = "postgresql+psycopg://msbd:msbd2026@localhost:5432/pagila"
 engine = create_engine(DSN, echo=True)
 
 class Base(DeclarativeBase): pass
