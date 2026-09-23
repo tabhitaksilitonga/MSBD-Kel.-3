@@ -4,6 +4,129 @@
 
 ## Q1-Q24
 
+### Q1 - total_dibayar
+
+Perintah:
+```sql
+CREATE OR REPLACE FUNCTION lab5.total_dibayar(p_rental_id bigint)
+RETURNS numeric LANGUAGE sql STABLE AS $$
+    SELECT coalesce(sum(amount), 0) 
+    FROM lab5.payment_tx 
+    WHERE rental_id = p_rental_id;
+$$;
+
+SELECT lab5.total_dibayar(1);
+```
+
+Keluaran:
+
+
+Alasan keputusan:
+lab5.total_dibayar pakai coalesce(sum(amount), 0) untuk menjumlahkan seluruh pembayaran di rental_id tertentu. Fungsi COALESCE memastikan kalau belum ada pembayaran (NULL), nilai yang dikembalikan tetap 0, bukan NULL.
+
+### Q2 - process_rental
+
+Perintah:
+```sql
+CREATE OR REPLACE PROCEDURE lab5.process_rental(
+    p_customer_id integer,
+    p_inventory_id integer,
+    p_staff_id integer,
+    p_amount numeric
+) LANGUAGE plpgsql AS $$
+DECLARE
+    v_rental_id bigint;
+BEGIN
+    INSERT INTO lab5.rental_tx (customer_id, inventory_id, staff_id, status)
+    VALUES (p_customer_id, p_inventory_id, p_staff_id, 'ACTIVE')
+    RETURNING rental_id INTO v_rental_id;
+
+    INSERT INTO lab5.payment_tx (rental_id, amount)
+    VALUES (v_rental_id, p_amount);
+END;
+$$;
+
+CALL lab5.process_rental(1, 1, 1, 4.99);
+SELECT count(*) FROM lab5.rental_tx;
+```
+
+Keluaran:
+
+
+Alasan keputusan:
+prosedur process_rental berhasil mengeksekusi dua perintah INSERT (ke rental_tx dan payment_tx) dalam satu blok transaksi. Pemanggilan dengan parameter yang sah (nominal positif dan ID referensi valid) berhasil menambahkan satu baris data di tabel rental_tx.
+
+### Q3 - buktikan_rollback
+
+Perintah:
+SELECT count(*) AS sebelum FROM lab5.rental_tx;
+
+CALL lab5.process_rental(1, 1, 1, -4.99);
+
+SELECT count(*) AS sesudah FROM lab5.rental_tx;
+
+Keluaran:
+
+
+Alasan keputusan:
+dipanggil dengan nominal negatif (-4.99) yang melanggar domain positive_amount. Karena PL/pgSQL mengeksekusi prosedur dalam satu blok transaksi, kegagalan pada INSERT kedua memicu ROLLBACK otomatis oleh server PostgreSQL. Akibatnya, INSERT pertama (ke rental_tx) yg udah berjalan ikut dibatalkan, sehingga jumlah data sebelum dan sesudah tetap sama.
+
+### Q4 - commit_dalam_procedure
+
+Perintah:
+```sql
+CREATE OR REPLACE PROCEDURE lab5.process_rental_commit(
+    p_customer_id integer, p_inventory_id integer, p_staff_id integer, p_amount numeric
+) LANGUAGE plpgsql AS $$
+DECLARE v_rental_id bigint;
+BEGIN
+    INSERT INTO lab5.rental_tx (customer_id, inventory_id, staff_id)
+    VALUES (p_customer_id, p_inventory_id, p_staff_id)
+    RETURNING rental_id INTO v_rental_id;
+
+    COMMIT; 
+
+    INSERT INTO lab5.payment_tx (rental_id, amount)
+    VALUES (v_rental_id, p_amount);
+END;
+$$;
+```
+
+Keluaran:
+
+
+Alasan keputusan:
+psycopg nya secara default mengelola transaksi di sisi klien (mengirimkan BEGIN implisit). PostgreSQL melarang prosedur untuk melakukan COMMIT atau ROLLBACK eksplisit kalau prosedur tersebut dipanggil dari dalam blok transaksi yang sedang aktif dan dikelola oleh klien.
+
+### Q5 - exception_fk
+
+Perintah:
+```sql
+CREATE OR REPLACE PROCEDURE lab5.process_rental_safe(
+    p_customer_id integer, p_inventory_id integer, p_staff_id integer, p_amount numeric
+) LANGUAGE plpgsql AS $$
+DECLARE v_rental_id bigint;
+BEGIN
+    INSERT INTO lab5.rental_tx (customer_id, inventory_id, staff_id)
+    VALUES (p_customer_id, p_inventory_id, p_staff_id)
+    RETURNING rental_id INTO v_rental_id;
+
+    INSERT INTO lab5.payment_tx (rental_id, amount)
+    VALUES (v_rental_id, p_amount);
+EXCEPTION
+    WHEN foreign_key_violation THEN
+        RAISE EXCEPTION 'Gagal: ID Customer, Inventory, atau Staff tidak valid/tidak ditemukan.';
+END;
+$$;
+```
+
+Keluaran:
+
+
+Alasan keputusan:
+Blok EXCEPTION WHEN foreign_key_violation nangkap error mentah dari database dan menggantinya dengan pesan kustom.
+Informasi yang hilang: Nama constraint spesifik, nama tabel, dan nilai key yang gagal.
+
 ### Q6 — Domain positive_amount
 
 Perintah:
@@ -428,7 +551,11 @@ ForeignKeyViolation dari Postgres ditangkap dan diterjemahkan menjadi
 409 dengan pesan generik, sehingga klien tidak melihat detail SQL
 atau struktur tabel yang sebenarnya.
 
+## Reflektif A
 
+Setelah Q3 dan Q4, siapa yang memulai transaksi, siapa yang mengakhirinya, dan bagaimana kelompok membuktikannya dari data?
+> di Q3, transaksi dimulai dan diakhiri oleh Database Engine (PostgreSQL). Server memulai transaksi implisit saat CALL dieksekusi, dan mengakhirinya dengan auto-rollback saat mendeteksi pelanggaran domain. Kelompok membuktikannya dari data dengan melihat hasil SELECT count(*) AS sebelum dan sesudah yang angkanya tetap sama.
+kalau di Q4, transaksi dimulai oleh Klien/Driver (psycopg) secara implisit saat koneksi dibuka, dan seharusnya diakhiri oleh procedure (COMMIT), tapi, Klien/Driver yang mengakhiri transaksi tersebut dengan menolak perintah COMMIT dari procedure. Kelompok membuktikannya dari munculnya pesan error invalid transaction termination di terminal Python dan tidak adanya data baru yang tersimpan di tabel.
 
 ## Reflektif B
 
