@@ -19,7 +19,11 @@ SELECT lab5.total_dibayar(1);
 ```
 
 Keluaran:
-
+CREATE FUNCTION
+ total_dibayar 
+---------------
+             0
+(1 row)
 
 Alasan keputusan:
 lab5.total_dibayar pakai coalesce(sum(amount), 0) untuk menjumlahkan seluruh pembayaran di rental_id tertentu. Fungsi COALESCE memastikan kalau belum ada pembayaran (NULL), nilai yang dikembalikan tetap 0, bukan NULL.
@@ -51,7 +55,12 @@ SELECT count(*) FROM lab5.rental_tx;
 ```
 
 Keluaran:
-
+CREATE PROCEDURE
+CALL
+ count 
+-------
+     1
+(1 row)
 
 Alasan keputusan:
 prosedur process_rental berhasil mengeksekusi dua perintah INSERT (ke rental_tx dan payment_tx) dalam satu blok transaksi. Pemanggilan dengan parameter yang sah (nominal positif dan ID referensi valid) berhasil menambahkan satu baris data di tabel rental_tx.
@@ -66,7 +75,20 @@ CALL lab5.process_rental(1, 1, 1, -4.99);
 SELECT count(*) AS sesudah FROM lab5.rental_tx;
 
 Keluaran:
+sebelum 
+---------
+       1
+(1 row)
 
+psql:/proc/self/fd/0:3: ERROR:  value for domain lab5.positive_amount violates check constraint "positive_amount_check"
+CONTEXT:  SQL statement "INSERT INTO lab5.payment_tx (rental_id, amount)
+    VALUES (v_rental_id, p_amount)"
+PL/pgSQL function lab5.process_rental(integer,integer,integer,numeric) line 9 at SQL statement
+
+ sesudah 
+---------
+       1
+(1 row)
 
 Alasan keputusan:
 dipanggil dengan nominal negatif (-4.99) yang melanggar domain positive_amount. Karena PL/pgSQL mengeksekusi prosedur dalam satu blok transaksi, kegagalan pada INSERT kedua memicu ROLLBACK otomatis oleh server PostgreSQL. Akibatnya, INSERT pertama (ke rental_tx) yg udah berjalan ikut dibatalkan, sehingga jumlah data sebelum dan sesudah tetap sama.
@@ -93,7 +115,14 @@ $$;
 ```
 
 Keluaran:
-
+Traceback (most recent call last):
+  File "<string>", line 7, in <module>
+    cur.execute('CALL lab5.process_rental_with_commit(%s, %s, %s, %s);', (1, 1, 1, 4.99))
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\msbd-2026\.venv\Lib\site-packages\psycopg\cursor.py", line 732, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.InvalidTransactionTermination: cannot commit while a subtransaction is active
+CONTEXT:  PL/pgSQL function lab5.process_rental_with_commit(integer,integer,integer,numeric) line 11 at COMMIT
 
 Alasan keputusan:
 psycopg nya secara default mengelola transaksi di sisi klien (mengirimkan BEGIN implisit). PostgreSQL melarang prosedur untuk melakukan COMMIT atau ROLLBACK eksplisit kalau prosedur tersebut dipanggil dari dalam blok transaksi yang sedang aktif dan dikelola oleh klien.
@@ -121,7 +150,8 @@ $$;
 ```
 
 Keluaran:
-
+ERROR:  Gagal: ID Customer, Inventory, atau Staff tidak valid/tidak ditemukan.
+CONTEXT:  PL/pgSQL function lab5.process_rental_safe(integer,integer,integer,numeric) line 12 at RAISE
 
 Alasan keputusan:
 Blok EXCEPTION WHEN foreign_key_violation nangkap error mentah dari database dan menggantinya dengan pesan kustom.
