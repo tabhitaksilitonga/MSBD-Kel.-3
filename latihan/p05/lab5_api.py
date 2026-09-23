@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from psycopg_pool import ConnectionPool
 import psycopg
 
-DSN = "postgresql://msbd:msbd2026@localhost:5432/latihan"
+DSN = "postgresql://msbd:msbd2026@localhost:5433/latihan"
 
 pool = ConnectionPool(DSN, min_size=1, max_size=5, open=True)
 app = FastAPI()
@@ -30,9 +30,14 @@ def create_rental(payload: RentalRequest, conn=Depends(get_conn)):
     try:
         with conn.cursor() as cur:
             cur.execute(
-                "CALL lab5.process_rental(%s, %s, %s, %s)",
-                (payload.customer_id, payload.inventory_id, payload.staff_id, payload.amount),
-            )
+    "CALL lab5.process_rental(%s::integer, %s::integer, %s::integer, %s::numeric)",
+    (
+        payload.customer_id,
+        payload.inventory_id,
+        payload.staff_id,
+        payload.amount,
+    ),
+)
             cur.execute(
                 "SELECT rental_id FROM lab5.rental_tx ORDER BY rental_id DESC LIMIT 1"
             )
