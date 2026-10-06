@@ -1,0 +1,48 @@
+Q18 - GIN PADA KOLOM ARRAY tags
+
+Query:
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*)
+FROM lab6.event_log
+WHERE tags @> ARRAY['kanal:2','sumber:1'];
+
+============================================================
+RUN 1
+============================================================
+
+Aggregate (cost=... ) (actual time=... rows=1 loops=1) Buffers: ... -> Seq Scan on event_log (cost=... ) (actual time=... ) Filter: (tags @> '{kanal:2,sumber:1}'::text[]) Rows Removed by Filter: ... Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+============================================================
+RUN 2
+============================================================
+
+Aggregate (cost=... ) (actual time=... rows=1 loops=1) Buffers: ... -> Seq Scan on event_log (cost=... ) (actual time=... ) Filter: (tags @> '{kanal:2,sumber:1}'::text[]) Rows Removed by Filter: ... Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+============================================================
+RUN 3
+============================================================
+
+Aggregate (cost=... ) (actual time=... rows=1 loops=1) Buffers: ... -> Seq Scan on event_log (cost=... ) (actual time=... ) Filter: (tags @> '{kanal:2,sumber:1}'::text[]) Rows Removed by Filter: ... Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+CREATE INDEX ev_tags_gin
+ON lab6.event_log USING gin (tags);
+ANALYZE lab6.event_log;
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*)
+FROM lab6.event_log
+WHERE tags @> ARRAY['kanal:2','sumber:1'];
+
+============================================================
+RINGKASAN
+============================================================
+
+Fastest : ... ms
+Median   : ... ms
+Plan     : Seq Scan / GIN Index Scan
+Sort     : Tidak
+
+Penjelasan:
+- Query memakai operator containment @> di kolom array tags.
+- GIN memang cocok untuk array search, tetapi bila selektivitas terlalu rendah/planner menilai biaya scan lebih rendah, planner bisa tetap memilih Seq Scan.
+- Ini penting: tidak semua query array cocok otomatis dengan index.
