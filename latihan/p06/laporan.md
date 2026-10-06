@@ -3,11 +3,11 @@
 ## Identitas Kelompok
 | Nama | NIM | Kontribusi | Commit |
 | :--- | :--- | :--- | :--- |
-| Tabhita Kristy SIlitonga | 251402023 | Project Manager, Setup Q00, Finalisasi laporan & readme | 277c52c |
-| Jevine Jeje Zakarias Simanjuntak | 251402085 | Langkah 2 (Q01-Q04) View & WITH CHECK OPTION, Refleksi A | 2ee4bfd |
-| Fadila Lisma Sari | 251402117 | Langkah 3 (Q05-Q08) Materialized View & Concurrent Refresh, Refleksi B | 0d36a6f |
-| Qairsya Naurel ein Yaliki | 251402120 | Langkah 4 (Q09-Q13) Trigger Audit Baris & Pernyataan, Refleksi C | 9bb7819 |
-| Reynald Alvaro Pasaribu | 251402147 | Langkah 5 & 6 (Q14-Q21) Constraint & Expand-Contract, Refleksi D & E | ed8c976 |
+| Tabhita Kristy SIlitonga | 251402023 | Project Manager, Langkah 1 (Q00) Setup 2 Juta Baris, Struktur Repo, Finalisasi laporan | 55aa8fc |
+| Jevine Jeje Zakarias Simanjuntak | 251402085 | Langkah 2 (Q01–Q06) Anatomi Penyimpanan (Halaman, TOAST, dan HOT Update), Reflektif Q1 & Q6 | 1252149 |
+| Fadila Lisma Sari | 251402117 | Langkah 3 (Q07–Q11) Baseline, B-Tree, dan Urutan Kolom Composite Index, Reflektif Q11 | a55bf35 |
+| Qairsya Naurel ein Yaliki | 251402120 | Langkah 4 & 5 (Q12–Q21) Partial, Expression, Covering Index, GIN & BRIN, Reflektif Q16 & Q21 | bae3982 |
+| Reynald Alvaro Pasaribu | 251402147 | Langkah 6 & 7 (Q22–Q31) Statistik, Selektivitas, Seq Scan, Harga Tulis, dan Rekomendasi Index, Reflektif Q26 & Q31 | a5b21f2 |
 
 ---
 
