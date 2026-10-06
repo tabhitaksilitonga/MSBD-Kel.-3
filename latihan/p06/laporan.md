@@ -1,4 +1,4 @@
-# Laporan Latihan Kelompok Pertemuan 4
+# Laporan Latihan Kelompok Pertemuan 6
 
 ## Identitas Kelompok
 | Nama | NIM | Kontribusi | Commit |
@@ -12,6 +12,20 @@
 ---
 
 ## Q1–Q21
+
+### Q1
+Dari hasil pengukuran menggunakan fungsi pg_total_relation_size(), tabel lab6.event_log memiliki ukuran penyimpanan sebesar XX MB. Dengan jumlah data 2 juta baris, rata-rata satu tuple butuh ruang sebesar XX byte. ukuran itu tidak hanya berasal dari isi kolom, tapi juga dipengaruhi oleh tuple header PostgreSQL, alignment data, serta metadata penyimpanan internal.
+
+### Q2
+PostgreSQL nyimpan data dalam halaman berukuran 8 KB.berdasarkan hasil pengujian, setiap halaman dapat menampung sekitar XX tuple. jumlah tuple per halaman dipengaruhi oleh ukuran setiap baris. makin besar ukuran record, makin sedikit jumlah tuple yang dapat masuk ke satu halaman.
+
+### Q3
+Kolom dengan storage x memungkinkan PostgreSQL menggunakan mekanisme TOAST. TOAST digunakan untuk menangani data berukuran besar dengan cara melakukan kompresi atau memindahkan data ke tabel penyimpanan eksternal. pada tabel event_log, kolom seperti payload bertipe JSONB berpotensi menggunakan TOAST karena ukurannya dapat berkembang.
+
+### Q4
+Fillfactor menentukan jumlah ruang kosong yang disediakan pada setiap halaman. tabel dengan fillfactor 80 memiliki ruang kosong lebih besar sehingga PostgreSQL memiliki peluang lebih tinggi melakukan HOT Update. sedangkan fillfactor 100 mengisi halaman hampir penuh sehingga ketika terjadi UPDATE, PostgreSQL lebih sering membuat tuple baru pada lokasi berbeda.
+
+### Q5
 
 ### Q7
 Pada kondisi baseline tanpa index, PostgreSQL menggunakan Sequential Scan pada tabel lab6.event_log, kemudian melakukan Sort berdasarkan terjadi_pada DESC, lalu mengambil 20 baris menggunakan Limit. Hasil estimasi menunjukkan 17 baris, sedangkan jumlah aktual yang ditemukan adalah 21 baris sebelum proses Sort dan 20 baris setelah Limit. Sebanyak 1.999.979 baris harus dilewati karena tidak memenuhi kondisi filter. Dari tiga kali pengujian, waktu tercepat adalah 308.006 ms, sedangkan median adalah 1730.742 ms.
