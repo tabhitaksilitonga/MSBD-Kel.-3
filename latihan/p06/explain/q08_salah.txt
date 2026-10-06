@@ -1,0 +1,46 @@
+Q8 - INDEX (terjadi_pada, customer_id)
+
+CREATE INDEX ev_salah_idx
+ON lab6.event_log (terjadi_pada, customer_id);
+
+
+Query:
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT event_id, jumlah
+FROM lab6.event_log
+WHERE customer_id=4211
+  AND terjadi_pada >= timestamptz '2024-06-01 00:00+07'
+ORDER BY terjadi_pada DESC
+LIMIT 20;
+
+
+============================================================
+RUN 1
+============================================================
+
+Limit (cost=0.43..25112.66 rows=17 width=22) (actual time=6.894..333.131 rows=20 loops=1) Buffers: shared hit=28 read=3147 written=1 -> Index Scan Backward using ev_salah_idx on event_log (cost=0.43..25112.66 rows=17 width=22) (actual time=6.835..333.000 rows=20 loops=1) Index Cond: ((terjadi_pada >= '2024-05-31 17:00:00+00'::timestamp with time zone) AND (customer_id = 4211)) Buffers: shared hit=28 read=3147 written=1 Planning: Buffers: shared hit=21 read=1 Planning Time: 13.124 ms Execution Time: 334.843 ms (9 rows)
+
+
+============================================================
+RUN 2
+============================================================
+
+Limit (cost=0.43..25112.66 rows=17 width=22) (actual time=0.484..41.752 rows=20 loops=1) Buffers: shared hit=3175 -> Index Scan Backward using ev_salah_idx on event_log (cost=0.43..25112.66 rows=17 width=22) (actual time=0.482..41.717 rows=20 loops=1) Index Cond: ((terjadi_pada >= '2024-05-31 17:00:00+00'::timestamp with time zone) AND (customer_id = 4211)) Buffers: shared hit=3175 Planning Time: 0.148 ms Execution Time: 80.723 ms (7 rows)
+
+
+============================================================
+RUN 3
+============================================================
+
+Limit (cost=0.43..25112.66 rows=17 width=22) (actual time=0.443..30.574 rows=20 loops=1) Buffers: shared hit=3175 -> Index Scan Backward using ev_salah_idx on event_log (cost=0.43..25112.66 rows=17 width=22) (actual time=0.441..30.550 rows=20 loops=1) Index Cond: ((terjadi_pada >= '2024-05-31 17:00:00+00'::timestamp with time zone) AND (customer_id = 4211)) Buffers: shared hit=3175 Planning Time: 0.218 ms Execution Time: 30.623 ms (7 rows)
+
+
+============================================================
+RINGKASAN
+============================================================
+
+Fastest : 30.623 ms
+Median   : 80.723 ms
+Plan     : Index Scan Backward
+Sort     : Tidak
+Index    : ev_salah_idx

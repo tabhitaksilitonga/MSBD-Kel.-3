@@ -1,0 +1,46 @@
+Q9 - INDEX (customer_id, terjadi_pada DESC)
+
+CREATE INDEX ev_benar_idx
+ON lab6.event_log (customer_id, terjadi_pada DESC);
+
+
+Query:
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT event_id, jumlah
+FROM lab6.event_log
+WHERE customer_id=4211
+  AND terjadi_pada >= timestamptz '2024-06-01 00:00+07'
+ORDER BY terjadi_pada DESC
+LIMIT 20;
+
+
+============================================================
+RUN 1
+============================================================
+
+Limit (cost=0.43..72.77 rows=17 width=22) (actual time=1.089..4.706 rows=20 loops=1) Buffers: shared hit=20 read=3 -> Index Scan using ev_benar_idx on event_log (cost=0.43..72.77 rows=17 width=22) (actual time=0.991..4.541 rows=20 loops=1) Index Cond: ((customer_id = 4211) AND (terjadi_pada >= '2024-05-31 17:00:00+00'::timestamp with time zone)) Buffers: shared hit=20 read=3 Planning: Buffers: shared hit=22 read=1 Planning Time: 14.749 ms Execution Time: 5.499 ms (9 rows)
+
+
+============================================================
+RUN 2
+============================================================
+
+Limit (cost=0.43..72.77 rows=17 width=22) (actual time=0.043..0.091 rows=20 loops=1) Buffers: shared hit=23 -> Index Scan using ev_benar_idx on event_log (cost=0.43..72.77 rows=17 width=22) (actual time=0.041..0.085 rows=20 loops=1) Index Cond: ((customer_id = 4211) AND (terjadi_pada >= '2024-05-31 17:00:00+00'::timestamp with time zone)) Buffers: shared hit=23 Planning Time: 1.342 ms Execution Time: 0.270 ms (7 rows)
+
+
+============================================================
+RUN 3
+============================================================
+
+Limit (cost=0.43..72.77 rows=17 width=22) (actual time=0.188..0.372 rows=20 loops=1) Buffers: shared hit=23 -> Index Scan using ev_benar_idx on event_log (cost=0.43..72.77 rows=17 width=22) (actual time=0.186..0.366 rows=20 loops=1) Index Cond: ((customer_id = 4211) AND (terjadi_pada >= '2024-05-31 17:00:00+00'::timestamp with time zone)) Buffers: shared hit=23 Planning Time: 0.532 ms Execution Time: 0.405 ms (7 rows)
+
+
+============================================================
+RINGKASAN
+============================================================
+
+Fastest : 0.270 ms
+Median   : 0.405 ms
+Plan     : Index Scan
+Sort     : Tidak
+Index    : ev_benar_idx

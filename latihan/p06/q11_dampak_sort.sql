@@ -1,0 +1,34 @@
+-- ============================================================
+-- Q11: REFLEKSI B-TREE DAN URUTAN KOLOM
+-- ============================================================
+
+-- Tidak ada query tambahan untuk Q11.
+-- Q11 merupakan pertanyaan reflektif mengenai hubungan
+-- urutan leaf B-tree dengan kemampuan optimizer
+-- menghindari Sort.
+
+
+-- Jawaban:
+--
+-- Index ev_benar_idx menggunakan:
+--
+-- (customer_id, terjadi_pada DESC)
+--
+-- Urutan tersebut sesuai dengan pola query:
+--
+-- WHERE customer_id = 4211
+-- ORDER BY terjadi_pada DESC
+-- LIMIT 20
+--
+-- Karena customer_id menjadi kolom pertama index dan
+-- terjadi_pada sudah diurutkan DESC, PostgreSQL dapat
+-- membaca data sesuai urutan yang dibutuhkan query.
+--
+-- Oleh karena itu, PostgreSQL tidak perlu melakukan Sort.
+--
+-- Hal tersebut terlihat pada hasil EXPLAIN Q9 yang
+-- menggunakan Index Scan dan tidak memiliki node Sort.
+--
+-- Selain itu, karena query menggunakan LIMIT 20,
+-- PostgreSQL dapat berhenti setelah menemukan 20 baris
+-- yang sesuai.
