@@ -1,0 +1,51 @@
+Q12 - PARTIAL INDEX - BASELINE TANPA INDEX
+
+Deskripsi:
+Query mencari event dengan status='GAGAL' (sekitar 2% baris tabel).
+Baseline ini menjalankan tanpa index sama sekali (hanya PK yang tersedia).
+
+Query:
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT event_id, terjadi_pada, jumlah
+FROM lab6.event_log
+WHERE status = 'GAGAL'
+ORDER BY terjadi_pada DESC
+LIMIT 20;
+
+
+============================================================
+RUN 1
+============================================================
+
+Limit (cost=88654.23..88654.28 rows=20 width=22) (actual time=5127.342..5127.518 rows=20 loops=1) Buffers: shared hit=15021 read=43721 written=8 -> Sort (cost=88654.23..88654.28 rows=20 width=22) (actual time=5126.891..5126.934 rows=20 loops=1) Sort Key: terjadi_pada DESC Sort Method: quicksort Memory: 28kB Buffers: shared hit=15021 read=43721 written=8 -> Seq Scan on event_log (cost=0.00..88653.00 rows=20 width=22) (actual time=2750.123..5124.567 rows=42 loops=1) Filter: (status = 'GAGAL'::text) Rows Removed by Filter: 1999958 Buffers: shared hit=15018 read=43721 written=8 Planning Time: 18.234 ms Execution Time: 5128.756 ms (12 rows)
+
+
+============================================================
+RUN 2
+============================================================
+
+Limit (cost=88654.23..88654.28 rows=20 width=22) (actual time=1842.567..1842.623 rows=20 loops=1) Buffers: shared hit=15043 read=43702 -> Sort (cost=88654.23..88654.28 rows=20 width=22) (actual time=1842.234..1842.267 rows=20 loops=1) Sort Key: terjadi_pada DESC Sort Method: quicksort Memory: 28kB Buffers: shared hit=15043 read=43702 -> Seq Scan on event_log (cost=0.00..88653.00 rows=20 width=22) (actual time=1523.456..1841.890 rows=42 loops=1) Filter: (status = 'GAGAL'::text) Rows Removed by Filter: 1999958 Buffers: shared hit=15040 read=43702 Planning Time: 5.123 ms Execution Time: 1843.891 ms (12 rows)
+
+============================================================
+RUN 3
+============================================================
+
+Limit (cost=88654.23..88654.28 rows=20 width=22) (actual time=323.456..323.512 rows=20 loops=1) Buffers: shared hit=15067 read=43688 -> Sort (cost=88654.23..88654.28 rows=20 width=22) (actual time=323.234..323.267 rows=20 loops=1) Sort Key: terjadi_pada DESC Sort Method: quicksort Memory: 28kB Buffers: shared hit=15067 read=43688 -> Seq Scan on event_log (cost=0.00..88653.00 rows=20 width=22) (actual time=187.234..323.123 rows=42 loops=1) Filter: (status = 'GAGAL'::text) Rows Removed by Filter: 1999958 Buffers: shared hit=15064 read=43688 Planning Time: 0.234 ms Execution Time: 324.123 ms (12 rows)
+
+
+============================================================
+RINGKASAN
+============================================================
+
+Fastest : 324.123 ms
+Median   : 1843.891 ms
+Plan     : Seq Scan -> Sort -> Limit
+Sort     : Ya
+
+Penjelasan:
+- Tanpa index, planner melakukan Seq Scan pada seluruh tabel (2 juta baris)
+- Filter status='GAGAL' diterapkan selama scan, hanya ~42 baris yang lolos
+- Hasil diurutkan dengan Sort (quicksort) sebelum LIMIT 20
+- Buffer hits meningkat dari RUN 1 ke RUN 3 karena caching
+- Execution Time bergantung pada state buffer: cold cache (5.1s), warm cache (1.8s), hot cache (324ms)
+
