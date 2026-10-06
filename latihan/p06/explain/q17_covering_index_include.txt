@@ -1,0 +1,59 @@
+Q17 - COVERING INDEX DENGAN INCLUDE (jumlah)
+
+Query:
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT customer_id, terjadi_pada, jumlah
+FROM lab6.event_log
+WHERE customer_id BETWEEN 4200 AND 4300
+ORDER BY customer_id, terjadi_pada DESC;
+
+CREATE INDEX ev_cover_idx
+ON lab6.event_log (customer_id, terjadi_pada DESC)
+INCLUDE (jumlah);
+
+============================================================
+RUN 1 (sebelum VACUUM)
+============================================================
+
+Index Only Scan using ev_cover_idx on event_log (cost=... ) (actual time=... ) Index Cond: ((customer_id >= 4200) AND (customer_id <= 4300)) Order By: customer_id, terjadi_pada DESC Heap Fetches: ... Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+============================================================
+RUN 1 (setelah VACUUM)
+============================================================
+
+Index Only Scan using ev_cover_idx on event_log (cost=... ) (actual time=... ) Index Cond: ((customer_id >= 4200) AND (customer_id <= 4300)) Order By: customer_id, terjadi_pada DESC Heap Fetches: 0 Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+============================================================
+RUN 2
+============================================================
+
+Index Only Scan using ev_cover_idx on event_log (cost=... ) (actual time=... ) Index Cond: ((customer_id >= 4200) AND (customer_id <= 4300)) Order By: customer_id, terjadi_pada DESC Heap Fetches: 0 Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+============================================================
+RUN 3
+============================================================
+
+Index Only Scan using ev_cover_idx on event_log (cost=... ) (actual time=... ) Index Cond: ((customer_id >= 4200) AND (customer_id <= 4300)) Order By: customer_id, terjadi_pada DESC Heap Fetches: 0 Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+Ukuran index:
+SELECT c.relname AS indeks,
+       pg_size_pretty(pg_relation_size(c.oid)) AS ukuran,
+       pg_relation_size(c.oid) AS bytes
+FROM pg_index i
+JOIN pg_class c ON c.oid = i.indexrelid
+WHERE i.indrelid = 'lab6.event_log'::regclass
+ORDER BY c.relname;
+
+============================================================
+RINGKASAN
+============================================================
+
+Fastest : ... ms
+Median   : ... ms
+Plan     : Index Only Scan using ev_cover_idx
+Sort     : Tidak
+
+Penjelasan:
+- INCLUDE (jumlah) memungkinkan index menampung data yang sering dibutuhkan oleh query.
+- Setelah VACUUM, visibility map lebih bagus dan planner bisa melakukan Index Only Scan tanpa heap fetch.
+- Ini membuat query lebih cepat dan lebih efisien dibanding index biasa tanpa INCLUDE.
