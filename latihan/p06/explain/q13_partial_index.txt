@@ -1,0 +1,67 @@
+Q13 - PARTIAL INDEX WHERE status = 'GAGAL'
+
+Query:
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT event_id, terjadi_pada, jumlah
+FROM lab6.event_log
+WHERE status = 'GAGAL'
+ORDER BY terjadi_pada DESC
+LIMIT 20;
+
+CREATE INDEX ev_gagal_part_idx
+ON lab6.event_log (terjadi_pada DESC)
+WHERE status = 'GAGAL';
+
+============================================================
+RUN 1
+============================================================
+
+Limit (cost=... ) (actual time=... rows=20 loops=1) Buffers: ... -> Index Scan Backward using ev_gagal_part_idx on event_log (cost=... ) (actual time=... ) Index Cond: (status = 'GAGAL'::text) Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+============================================================
+RUN 2
+============================================================
+
+Limit (cost=... ) (actual time=... rows=20 loops=1) Buffers: ... -> Index Scan Backward using ev_gagal_part_idx on event_log (cost=... ) (actual time=... ) Index Cond: (status = 'GAGAL'::text) Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+============================================================
+RUN 3
+============================================================
+
+Limit (cost=... ) (actual time=... rows=20 loops=1) Buffers: ... -> Index Scan Backward using ev_gagal_part_idx on event_log (cost=... ) (actual time=... ) Index Cond: (status = 'GAGAL'::text) Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+Predikat tidak cocok:
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT event_id, terjadi_pada, jumlah
+FROM lab6.event_log
+WHERE status = 'TERTUNDA'
+ORDER BY terjadi_pada DESC
+LIMIT 20;
+
+Hasil:
+- Partial index tidak dipakai untuk status TERTUNDA karena predikat tidak cocok.
+- Planner kembali ke scan biasa, kemungkinan Sort masih muncul.
+
+Ukuran partial vs full index:
+SELECT c.relname AS indeks,
+       pg_size_pretty(pg_relation_size(c.oid)) AS ukuran,
+       pg_relation_size(c.oid) AS bytes
+FROM pg_index i
+JOIN pg_class c ON c.oid = i.indexrelid
+WHERE i.indrelid = 'lab6.event_log'::regclass
+ORDER BY c.relname;
+
+============================================================
+RINGKASAN
+============================================================
+
+Fastest : ... ms
+Median   : ... ms
+Plan     : Index Scan Backward
+Sort     : Tidak
+Index    : ev_gagal_part_idx
+
+Penjelasan:
+- Partial index cocok untuk query status='GAGAL' karena hanya mencakup subset data.
+- Jika query memakai status lain, planner tidak memakai index.
+- Ukuran partial index biasanya lebih kecil daripada full index pada (status, terjadi_pada).
