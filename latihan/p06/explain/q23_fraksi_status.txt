@@ -1,0 +1,54 @@
+$ docker exec -i msbd-pg psql -U msbd -d latihan < latihan/p06/q23_fraksi_status.sql
+  status  | jumlah  | persen 
+----------+---------+--------
+ GAGAL    |   40000 |   2.00
+ SUKSES   | 1680000 |  84.00
+ TERTUNDA |  280000 |  14.00
+(3 rows)
+
+                                                             QUERY PLAN                                                              
+-------------------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on event_log  (cost=3209.37..65373.43 rows=287605 width=194) (actual time=22.275..200.027 rows=280000 loops=1)
+   Recheck Cond: (status = 'TERTUNDA'::text)
+   Heap Blocks: exact=58568
+   Buffers: shared hit=241 read=58569
+   ->  Bitmap Index Scan on ev_status_idx  (cost=0.00..3137.46 rows=287605 width=0) (actual time=12.387..12.388 rows=280000 loops=1)
+         Index Cond: (status = 'TERTUNDA'::text)
+         Buffers: shared hit=241 read=1
+ Planning:
+   Buffers: shared hit=25 read=5
+ Planning Time: 0.102 ms
+ Execution Time: 209.879 ms
+(11 rows)
+
+SET
+                                                               QUERY PLAN                                                               
+----------------------------------------------------------------------------------------------------------------------------------------
+ Index Scan using ev_status_idx on event_log  (cost=0.43..60727.35 rows=41201 width=194) (actual time=0.023..73.972 rows=40000 loops=1)
+   Index Cond: (status = 'GAGAL'::text)
+   Buffers: shared read=39965
+ Planning Time: 0.081 ms
+ Execution Time: 75.997 ms
+(5 rows)
+
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Seq Scan on event_log  (cost=0.00..83569.40 rows=287605 width=194) (actual time=0.022..139.332 rows=280000 loops=1)
+   Filter: (status = 'TERTUNDA'::text)
+   Rows Removed by Filter: 1720000
+   Buffers: shared hit=16338 read=42231
+ Planning Time: 0.051 ms
+ Execution Time: 147.907 ms
+(6 rows)
+
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Seq Scan on event_log  (cost=0.00..83569.40 rows=1671227 width=194) (actual time=0.066..181.531 rows=1680000 loops=1)
+   Filter: (status = 'SUKSES'::text)
+   Rows Removed by Filter: 320000
+   Buffers: shared hit=16348 read=42221
+ Planning Time: 0.049 ms
+ Execution Time: 230.729 ms
+(6 rows)
+
+RESET   

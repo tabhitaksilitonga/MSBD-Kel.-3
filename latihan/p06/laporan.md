@@ -11,7 +11,7 @@
 
 ---
 
-## Q1–Q21
+## Q1–Q31
 
 ### Q1
 Dari hasil pengukuran menggunakan fungsi pg_total_relation_size(), tabel lab6.event_log memiliki ukuran penyimpanan sebesar XX MB. Dengan jumlah data 2 juta baris, rata-rata satu tuple butuh ruang sebesar XX byte. ukuran itu tidak hanya berasal dari isi kolom, tapi juga dipengaruhi oleh tuple header PostgreSQL, alignment data, serta metadata penyimpanan internal.
@@ -41,6 +41,36 @@ Berdasarkan hasil pengukuran, ev_salah_idx dan ev_benar_idx memiliki ukuran yang
 
 ### Q11
 B-tree menyimpan data secara terurut pada bagian leaf. Pada ev_benar_idx (customer_id, terjadi_pada DESC), data dengan customer yang sama sudah dikelompokkan dan diurutkan berdasarkan waktu terbaru. Jadi, PostgreSQL bisa langsung mengambil data sesuai WHERE dan ORDER BY tanpa perlu melakukan Sort lagi. Karena query hanya membutuhkan 20 data, PostgreSQL juga bisa berhenti setelah menemukan 20 data yang sesuai.
+
+### Q22
+Berdasarkan hasil pengujian, index `ev_status_idx` efektif untuk status dengan selektivitas rendah seperti `GAGAL` yang hanya berjumlah 2% dari seluruh data. PostgreSQL menggunakan `Bitmap Heap Scan` dan `Bitmap Index Scan` sehingga pencarian dapat dilakukan tanpa membaca seluruh tabel. Sebaliknya, untuk `SUKSES` yang berjumlah 84%, PostgreSQL memilih `Seq Scan` karena sebagian besar baris memenuhi kondisi sehingga membaca tabel secara langsung lebih efisien.
+
+### Q23
+Distribusi data menunjukkan bahwa `GAGAL` memiliki 40.000 baris (2%), `SUKSES` 1.680.000 baris (84%), dan `TERTUNDA` 280.000 baris (14%). Pada pengujian `TERTUNDA`, PostgreSQL masih menggunakan `ev_status_idx` dengan `Bitmap Heap Scan` dan `Bitmap Index Scan`. Hal ini menunjukkan bahwa pada data sebesar 14%, index masih dapat memberikan manfaat dalam pencarian.
+
+### Q24
+Pengujian dengan `random_page_cost = 1.1` digunakan untuk melihat pengaruh biaya akses halaman secara acak terhadap pemilihan execution plan. Nilai `random_page_cost` yang lebih rendah membuat akses menggunakan index menjadi lebih menarik bagi PostgreSQL. Hasil pengujian ini digunakan untuk melihat apakah perubahan biaya tersebut dapat memengaruhi pilihan antara penggunaan index dan `Seq Scan`.
+
+### Q25
+Extended statistics dibuat pada kolom `wilayah` dan `kota` menggunakan `dependencies` dan `ndistinct`. Sebelum `ANALYZE`, PostgreSQL memperkirakan hanya 8.387 baris, sedangkan jumlah actual mencapai 44.444 baris. Setelah `ANALYZE`, estimasi meningkat menjadi 43.868 baris dan jauh lebih mendekati jumlah actual. Hal ini menunjukkan bahwa extended statistics membantu PostgreSQL menghasilkan estimasi jumlah baris yang lebih akurat ketika beberapa kolom memiliki hubungan.
+
+### Q26
+Hasil pengujian menunjukkan bahwa tidak ada batas selektivitas yang selalu menentukan kapan index atau `Seq Scan` harus digunakan. Pemilihan execution plan dipengaruhi oleh beberapa faktor seperti `random_page_cost`, ukuran tabel, distribusi data, jumlah halaman yang harus dibaca, correlation, dan kondisi cache. Oleh karena itu, penggunaan index perlu ditentukan berdasarkan kondisi dan pola query yang sebenarnya.
+
+### Q27
+Berdasarkan pengujian INSERT sebanyak 200.000 baris, tabel tanpa index memiliki median waktu 1059.442 ms, sedangkan tabel dengan lima index membutuhkan 2720.725 ms. Waktu INSERT meningkat sebesar 156.79% ketika lima index digunakan. Hal ini terjadi karena setiap baris baru tidak hanya dimasukkan ke tabel, tetapi juga harus memperbarui seluruh index yang terkait sehingga index memberikan tambahan biaya pada operasi tulis.
+
+### Q28
+Perbandingan ukuran tabel menunjukkan bahwa penggunaan index membutuhkan storage tambahan. Tabel dengan lima index memiliki ukuran total yang lebih besar dibandingkan tabel tanpa index karena setiap index menyimpan struktur tersendiri untuk mempercepat pencarian data. Dengan demikian, penggunaan index tidak hanya memberikan manfaat pada operasi baca, tetapi juga menambah kebutuhan penyimpanan.
+
+### Q29
+`idx_scan` digunakan untuk melihat seberapa sering sebuah index digunakan oleh PostgreSQL, sedangkan ukuran index menunjukkan storage yang digunakan oleh masing-masing index. Nilai `idx_scan` dapat digunakan untuk menilai apakah suatu index benar-benar dimanfaatkan oleh query. Index yang jarang digunakan tetapi tetap membutuhkan storage dan biaya pemeliharaan perlu dipertimbangkan kembali penggunaannya.
+
+### Q30
+Berdasarkan hasil pengujian, index direkomendasikan untuk kondisi dengan selektivitas tinggi seperti `GAGAL` sebesar 2%. Untuk `TERTUNDA` sebesar 14%, penggunaan index masih dapat dipertimbangkan karena PostgreSQL masih menggunakan Bitmap Index Scan. Sementara itu, `SUKSES` sebesar 84% lebih cocok menggunakan `Seq Scan`. Pada kombinasi `wilayah` dan `kota`, extended statistics dapat digunakan untuk membantu meningkatkan akurasi estimasi PostgreSQL.
+
+### Q31
+Dasar numerik menunjukkan bahwa manfaat index harus dibandingkan dengan biaya yang ditimbulkannya. Status `GAGAL` dengan selektivitas 2% dapat memanfaatkan index, sedangkan `SUKSES` dengan 84% lebih sesuai menggunakan `Seq Scan`. Extended statistics juga meningkatkan estimasi dari 8.387 menjadi 43.868 baris, mendekati actual 44.444 baris. Dari sisi operasi tulis, penggunaan lima index meningkatkan median waktu INSERT dari 1059.442 ms menjadi 2720.725 ms atau 156.79% lebih lambat. Hasil ini menunjukkan bahwa index sebaiknya dibuat berdasarkan kebutuhan query dan selektivitas data, bukan sebanyak mungkin.
 
 #### Kondisi Uji
 - **Tabel:** `lab6.event_log` (~2.000.000 baris)

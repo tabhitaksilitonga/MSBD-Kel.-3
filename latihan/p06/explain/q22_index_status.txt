@@ -1,0 +1,117 @@
+$ docker exec -it msbd-pg psql -U msbd -d latihan
+psql (17.11 (Debian 17.11-1.pgdg13+2))
+Type "help" for help.
+
+latihan=# \timing on
+SET max_parallel_workers_per_gather = 0;
+Timing is on.
+\timing: extra argument "SET" ignored
+\timing: extra argument "max_parallel_workers_per_gather" ignored
+\timing: extra argument "=" ignored
+\timing: extra argument "0;" ignored
+latihan=# SET max_parallel_workers_per_gather = 0;
+SET
+Time: 20.340 ms
+latihan=# \timing on
+Timing is on.
+latihan=# EXPLAIN (ANALYZE, BUFFERS)
+SELECT *
+FROM lab6.event_log
+WHERE status = 'SUKSES';
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Seq Scan on event_log  (cost=0.00..83569.40 rows=1671227 width=194) (actual time=0.758..338.253 rows=1680000 loops=1)
+   Filter: (status = 'SUKSES'::text)
+   Rows Removed by Filter: 320000
+   Buffers: shared hit=320 read=58249
+ Planning:
+   Buffers: shared hit=125 read=2
+ Planning Time: 1.931 ms
+ Execution Time: 388.482 ms
+(8 rows)
+
+Time: 411.474 ms
+latihan=# EXPLAIN (ANALYZE, BUFFERS)
+SELECT *
+FROM lab6.event_log
+WHERE status = 'SUKSES';
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Seq Scan on event_log  (cost=0.00..83569.40 rows=1671227 width=194) (actual time=0.122..185.674 rows=1680000 loops=1)
+   Filter: (status = 'SUKSES'::text)
+   Rows Removed by Filter: 320000
+   Buffers: shared hit=352 read=58217
+ Planning Time: 0.090 ms
+ Execution Time: 235.219 ms
+(6 rows)
+
+Time: 235.701 ms
+latihan=# EXPLAIN (ANALYZE, BUFFERS)
+SELECT *
+FROM lab6.event_log
+WHERE status = 'SUKSES';
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Seq Scan on event_log  (cost=0.00..83569.40 rows=1671227 width=194) (actual time=0.046..188.269 rows=1680000 loops=1)
+   Filter: (status = 'SUKSES'::text)
+   Rows Removed by Filter: 320000
+   Buffers: shared hit=384 read=58185
+ Planning Time: 0.073 ms
+ Execution Time: 238.375 ms
+(6 rows)
+
+Time: 238.820 ms
+latihan=# EXPLAIN (ANALYZE, BUFFERS)
+SELECT *
+FROM lab6.event_log
+WHERE status = 'GAGAL';
+                                                           QUERY PLAN                                                           
+--------------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on event_log  (cost=459.74..56931.07 rows=41201 width=194) (actual time=12.757..179.393 rows=40000 loops=1)
+   Recheck Cond: (status = 'GAGAL'::text)
+   Heap Blocks: exact=39929
+   Buffers: shared read=39965 written=8
+   ->  Bitmap Index Scan on ev_status_idx  (cost=0.00..449.44 rows=41201 width=0) (actual time=7.608..7.609 rows=40000 loops=1)
+         Index Cond: (status = 'GAGAL'::text)
+         Buffers: shared read=36
+ Planning Time: 0.407 ms
+ Execution Time: 182.215 ms
+(9 rows)
+
+Time: 183.890 ms
+latihan=# EXPLAIN (ANALYZE, BUFFERS)
+SELECT *
+FROM lab6.event_log
+WHERE status = 'GAGAL';
+                                                           QUERY PLAN                                                           
+--------------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on event_log  (cost=459.74..56931.07 rows=41201 width=194) (actual time=11.292..112.034 rows=40000 loops=1)
+   Recheck Cond: (status = 'GAGAL'::text)
+   Heap Blocks: exact=39929
+   Buffers: shared read=39965 written=12
+   ->  Bitmap Index Scan on ev_status_idx  (cost=0.00..449.44 rows=41201 width=0) (actual time=6.001..6.002 rows=40000 loops=1)
+         Index Cond: (status = 'GAGAL'::text)
+         Buffers: shared read=36
+ Planning Time: 0.237 ms
+ Execution Time: 114.173 ms
+(9 rows)
+
+Time: 115.388 ms
+latihan=# EXPLAIN (ANALYZE, BUFFERS)
+SELECT *
+FROM lab6.event_log
+WHERE status = 'GAGAL';
+                                                           QUERY PLAN                                                           
+--------------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on event_log  (cost=459.74..56931.07 rows=41201 width=194) (actual time=10.803..97.134 rows=40000 loops=1)
+   Recheck Cond: (status = 'GAGAL'::text)
+   Heap Blocks: exact=39929
+   Buffers: shared read=39965
+   ->  Bitmap Index Scan on ev_status_idx  (cost=0.00..449.44 rows=41201 width=0) (actual time=5.820..5.821 rows=40000 loops=1)
+         Index Cond: (status = 'GAGAL'::text)
+         Buffers: shared read=36
+ Planning Time: 0.083 ms
+ Execution Time: 99.044 ms
+(9 rows)
+
+Time: 99.722 ms

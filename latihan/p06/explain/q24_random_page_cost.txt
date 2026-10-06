@@ -1,0 +1,107 @@
+user@LAPTOP-QAOF4VPD MINGW64 /d/MSBD-Kel.-3 (latihan/p06-indexing)
+$  docker exec -i msbd-pg psql -U msbd -d latihan < latihan/p06/q24_random_page_cost.sql
+SET
+SET
+                                                               QUERY PLAN                                                                
+-----------------------------------------------------------------------------------------------------------------------------------------
+ Index Scan using ev_status_idx on event_log  (cost=0.43..17298.74 rows=41534 width=194) (actual time=2.079..831.811 rows=40000 loops=1)
+   Index Cond: (status = 'GAGAL'::text)
+   Buffers: shared read=39965 written=10107
+ Planning:
+   Buffers: shared hit=104 read=15
+ Planning Time: 5.053 ms
+ Execution Time: 836.300 ms
+(7 rows)
+
+                                                                QUERY PLAN                                                                 
+-------------------------------------------------------------------------------------------------------------------------------------------
+ Index Scan using ev_status_idx on event_log  (cost=0.43..39842.97 rows=279873 width=194) (actual time=1.090..178.243 rows=280000 loops=1)
+   Index Cond: (status = 'TERTUNDA'::text)
+   Buffers: shared read=58810
+ Planning Time: 0.159 ms
+ Execution Time: 193.181 ms
+(5 rows)
+
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Seq Scan on event_log  (cost=0.00..83569.54 rows=1678636 width=194) (actual time=0.076..275.897 rows=1680000 loops=1)
+   Filter: (status = 'SUKSES'::text)
+   Rows Removed by Filter: 320000
+   Buffers: shared hit=16286 read=42283
+ Planning Time: 0.063 ms
+ Execution Time: 355.086 ms
+(6 rows)
+
+RESET
+
+user@LAPTOP-QAOF4VPD MINGW64 /d/MSBD-Kel.-3 (latihan/p06-indexing)
+$ docker exec -i msbd-pg psql -U msbd -d latihan < latihan/p06/q24_random_page_cost.sql
+SET
+SET
+                                                               QUERY PLAN                                                                
+-----------------------------------------------------------------------------------------------------------------------------------------
+ Index Scan using ev_status_idx on event_log  (cost=0.43..17298.74 rows=41534 width=194) (actual time=0.038..147.989 rows=40000 loops=1)
+   Index Cond: (status = 'GAGAL'::text)
+   Buffers: shared read=39965
+ Planning:
+   Buffers: shared hit=84 read=35
+ Planning Time: 1.008 ms
+ Execution Time: 151.124 ms
+(7 rows)
+
+                                                                QUERY PLAN                                                                 
+-------------------------------------------------------------------------------------------------------------------------------------------
+ Index Scan using ev_status_idx on event_log  (cost=0.43..39842.97 rows=279873 width=194) (actual time=0.031..167.047 rows=280000 loops=1)
+   Index Cond: (status = 'TERTUNDA'::text)
+   Buffers: shared read=58810
+ Planning Time: 0.065 ms
+ Execution Time: 181.675 ms
+(5 rows)
+
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Seq Scan on event_log  (cost=0.00..83569.54 rows=1678636 width=194) (actual time=0.026..310.681 rows=1680000 loops=1)
+   Filter: (status = 'SUKSES'::text)
+   Rows Removed by Filter: 320000
+   Buffers: shared hit=16286 read=42283
+ Planning Time: 0.062 ms
+ Execution Time: 394.274 ms
+(6 rows)
+
+RESET
+
+user@LAPTOP-QAOF4VPD MINGW64 /d/MSBD-Kel.-3 (latihan/p06-indexing)
+$ docker exec -i msbd-pg psql -U msbd -d latihan < latihan/p06/q24_random_page_cost.sql
+SET
+SET
+                                                               QUERY PLAN                                                                
+-----------------------------------------------------------------------------------------------------------------------------------------
+ Index Scan using ev_status_idx on event_log  (cost=0.43..17298.74 rows=41534 width=194) (actual time=0.039..143.163 rows=40000 loops=1)
+   Index Cond: (status = 'GAGAL'::text)
+   Buffers: shared read=39965
+ Planning:
+   Buffers: shared hit=84 read=35
+ Planning Time: 0.607 ms
+ Execution Time: 146.483 ms
+(7 rows)
+
+                                                                QUERY PLAN                                                                 
+-------------------------------------------------------------------------------------------------------------------------------------------
+ Index Scan using ev_status_idx on event_log  (cost=0.43..39842.97 rows=279873 width=194) (actual time=0.032..170.986 rows=280000 loops=1)
+   Index Cond: (status = 'TERTUNDA'::text)
+   Buffers: shared read=58810
+ Planning Time: 0.067 ms
+ Execution Time: 186.232 ms
+(5 rows)
+
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Seq Scan on event_log  (cost=0.00..83569.54 rows=1678636 width=194) (actual time=0.028..279.425 rows=1680000 loops=1)
+   Filter: (status = 'SUKSES'::text)
+   Rows Removed by Filter: 320000
+   Buffers: shared hit=16286 read=42283
+ Planning Time: 0.187 ms
+ Execution Time: 361.548 ms
+(6 rows)
+
+RESET
