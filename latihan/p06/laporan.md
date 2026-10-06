@@ -14,18 +14,28 @@
 ## Q1–Q31
 
 ### Q1
-Dari hasil pengukuran menggunakan fungsi pg_total_relation_size(), tabel lab6.event_log memiliki ukuran penyimpanan sebesar XX MB. Dengan jumlah data 2 juta baris, rata-rata satu tuple butuh ruang sebesar XX byte. ukuran itu tidak hanya berasal dari isi kolom, tapi juga dipengaruhi oleh tuple header PostgreSQL, alignment data, serta metadata penyimpanan internal.
+Dari hasil pengukuran menggunakan pg_total_relation_size(), tabel lab6.event_log memiliki ukuran penyimpanan sebesar 501 MB atau 524.902.400 byte. Dengan jumlah data sebanyak 2.000.000 baris, rata-rata ruang penyimpanan yang dibutuhkan adalah sekitar 262,45 byte per baris. Ukuran tersebut tidak hanya berasal dari isi setiap kolom, tetapi juga dipengaruhi oleh tuple header PostgreSQL, alignment data, index, serta struktur penyimpanan internal lainnya.
 
 ### Q2
-PostgreSQL nyimpan data dalam halaman berukuran 8 KB.berdasarkan hasil pengujian, setiap halaman dapat menampung sekitar XX tuple. jumlah tuple per halaman dipengaruhi oleh ukuran setiap baris. makin besar ukuran record, makin sedikit jumlah tuple yang dapat masuk ke satu halaman.
+Pengukuran jumlah tuple per halaman dilakukan menggunakan ctid untuk mengelompokkan tuple berdasarkan page tempat data disimpan. Hasil pengujian menunjukkan jumlah minimum sebesar 15 tuple per halaman, maksimum 35 tuple per halaman, dan rata-rata sebesar 34,15 tuple per halaman, dengan total 58.569 halaman terpakai.
+Sebagai pembanding, statistik pada pg_class menunjukkan jumlah halaman sebanyak 58.569 halaman dan estimasi jumlah tuple sebesar 2.000.000 tuple, sehingga diperoleh rata-rata katalog sebesar 34,15 tuple per halaman. Hasil perhitungan berdasarkan ctid dan statistik katalog menunjukkan nilai rata-rata yang sama.
 
 ### Q3
-Kolom dengan storage x memungkinkan PostgreSQL menggunakan mekanisme TOAST. TOAST digunakan untuk menangani data berukuran besar dengan cara melakukan kompresi atau memindahkan data ke tabel penyimpanan eksternal. pada tabel event_log, kolom seperti payload bertipe JSONB berpotensi menggunakan TOAST karena ukurannya dapat berkembang.
+Hasil pemeriksaan pg_attribute menunjukkan bahwa kolom status, wilayah, kota, email, tags, dan payload memiliki nilai attstorage = 'x' atau extended. Storage jenis ini memungkinkan PostgreSQL menggunakan mekanisme TOAST apabila ukuran data cukup besar.sementara itu, kolom event_id, customer_id, terjadi_pada, dan idempotency_key memiliki nilai attstorage = 'p' atau plain, sedangkan kolom jumlah memiliki nilai attstorage = 'm' atau main.
+Mekanisme TOAST membantu PostgreSQL menangani data berukuran besar melalui kompresi atau penyimpanan data di luar heap utama. Oleh karena itu, penggunaan SELECT * dapat menambah biaya pembacaan apabila query ikut mengambil kolom berukuran besar seperti payload, tags, atau kolom bertipe teks yang sebenarnya tidak diperlukan.
 
 ### Q4
-Fillfactor menentukan jumlah ruang kosong yang disediakan pada setiap halaman. tabel dengan fillfactor 80 memiliki ruang kosong lebih besar sehingga PostgreSQL memiliki peluang lebih tinggi melakukan HOT Update. sedangkan fillfactor 100 mengisi halaman hampir penuh sehingga ketika terjadi UPDATE, PostgreSQL lebih sering membuat tuple baru pada lokasi berbeda.
+Pengujian Q4 direncanakan dengan membuat dua tabel, yaitu hot_penuh dengan fillfactor = 100 dan hot_longgar dengan fillfactor = 80. Namun, pada proses pengisian data terjadi error:
+cannot insert a non-DEFAULT value into column "event_id"
+
+Hal ini terjadi karena kolom event_id pada tabel hasil LIKE ... INCLUDING ALL tetap menggunakan properti GENERATED ALWAYS AS IDENTITY. Akibatnya, perintah INSERT ... SELECT * tidak dapat memasukkan nilai event_id secara langsung, karena proses insert gagal, kedua tabel tidak memiliki data sehingga perintah UPDATE menghasilkan UPDATE 0 dan nilai n_tup_upd maupun n_tup_hot_upd masih bernilai 0. Oleh karena itu, hasil Q4 ini belum dapat digunakan untuk membandingkan pengaruh fillfactor terhadap HOT Update.
 
 ### Q5
+Hasil pengukuran pg_relation_size() menunjukkan tabel hot_penuh dan hot_longgar masing-masing memiliki ukuran 0 bytes. hasil tersebut bukan menunjukkan bahwa fillfactor 80 dan fillfactor 100 menggunakan ruang penyimpanan yang sama, tetapi terjadi karena proses pengisian data pada Q4 gagal. Kedua tabel masih kosong akibat error pada kolom identity event_id. jadinya, pengukuran Q5 perlu dilakukan kembali setelah proses insert Q4 berhasil agar ukuran kedua tabel dapat dibandingkan secara valid.
+
+### Q6
+Pada Q6 dibuat tabel hot_test untuk menguji hubungan antara HOT Update dan keberadaan index. Namun, proses pengisian data kembali mengalami error pada kolom event_id karena kolom tersebut didefinisikan sebagai GENERATED ALWAYS AS IDENTITY.
+Akibat kegagalan insert, tabel hot_test tidak berisi data. Update pada kolom payload menghasilkan UPDATE 0, dengan n_tup_upd = 0 dan n_tup_hot_upd = 0. setelah dibuat index idx_hot_status pada kolom status, update terhadap kolom status juga menghasilkan UPDATE 0, dengan n_tup_upd = 0 dan n_tup_hot_upd = 0. jadinya, hasil Q6 saat ini belum dapat digunakan untuk menarik kesimpulan mengenai HOT Update karena tabel pengujian masih kosong. Pengujian perlu diulang setelah proses insert diperbaiki.
 
 ### Q7
 Pada kondisi baseline tanpa index, PostgreSQL menggunakan Sequential Scan pada tabel lab6.event_log, kemudian melakukan Sort berdasarkan terjadi_pada DESC, lalu mengambil 20 baris menggunakan Limit. Hasil estimasi menunjukkan 17 baris, sedangkan jumlah aktual yang ditemukan adalah 21 baris sebelum proses Sort dan 20 baris setelah Limit. Sebanyak 1.999.979 baris harus dilewati karena tidak memenuhi kondisi filter. Dari tiga kali pengujian, waktu tercepat adalah 308.006 ms, sedangkan median adalah 1730.742 ms.
