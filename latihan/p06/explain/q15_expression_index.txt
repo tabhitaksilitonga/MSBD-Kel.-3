@@ -1,0 +1,53 @@
+Q15 - EXPRESSION INDEX PADA lower(email)
+
+Query:
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT event_id, customer_id, email
+FROM lab6.event_log
+WHERE lower(email) = 'user1500000@contoh.ac.id';
+
+CREATE INDEX ev_email_idx ON lab6.event_log (email);
+CREATE INDEX ev_email_lower_idx
+ON lab6.event_log (lower(email));
+ANALYZE lab6.event_log;
+
+============================================================
+RUN 1
+============================================================
+
+Index Scan using ev_email_lower_idx on event_log (cost=... ) (actual time=... ) Index Cond: (lower((email)::text) = 'user1500000@contoh.ac.id'::text) Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+============================================================
+RUN 2
+============================================================
+
+Index Scan using ev_email_lower_idx on event_log (cost=... ) (actual time=... ) Index Cond: (lower((email)::text) = 'user1500000@contoh.ac.id'::text) Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+============================================================
+RUN 3
+============================================================
+
+Index Scan using ev_email_lower_idx on event_log (cost=... ) (actual time=... ) Index Cond: (lower((email)::text) = 'user1500000@contoh.ac.id'::text) Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+Ukuran kedua index:
+SELECT c.relname AS indeks,
+       pg_size_pretty(pg_relation_size(c.oid)) AS ukuran,
+       pg_relation_size(c.oid) AS bytes
+FROM pg_index i
+JOIN pg_class c ON c.oid = i.indexrelid
+WHERE i.indrelid = 'lab6.event_log'::regclass
+ORDER BY c.relname;
+
+============================================================
+RINGKASAN
+============================================================
+
+Fastest : ... ms
+Median   : ... ms
+Plan     : Index Scan using ev_email_lower_idx
+Sort     : Tidak
+
+Penjelasan:
+- Index ekspresi lower(email) dipakai secara langsung oleh planner.
+- Ini memungkinkan pencarian case-insensitive tanpa full scan.
+- Ukuran index ekspresi biasanya sedikit lebih besar daripada index biasa pada email, namun benefit query jauh lebih besar saat operasi lower(email) sering dipakai.
