@@ -1,0 +1,69 @@
+Q19 - GIN PADA payload JSONB: jsonb_ops vs jsonb_path_ops
+
+Query:
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*)
+FROM lab6.event_log
+WHERE payload @> '{"promo": true, "kanal": 1, "perangkat": 3}';
+
+============================================================
+RUN 1
+============================================================
+
+Aggregate (cost=... ) (actual time=... rows=1 loops=1) Buffers: ... -> Seq Scan on event_log (cost=... ) (actual time=... ) Filter: (payload @> '{"promo": true, "kanal": 1, "perangkat": 3}'::jsonb) Rows Removed by Filter: ... Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+============================================================
+RUN 2
+============================================================
+
+Aggregate (cost=... ) (actual time=... rows=1 loops=1) Buffers: ... -> Seq Scan on event_log (cost=... ) (actual time=... ) Filter: (payload @> '{"promo": true, "kanal": 1, "perangkat": 3}'::jsonb) Rows Removed by Filter: ... Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+============================================================
+RUN 3
+============================================================
+
+Aggregate (cost=... ) (actual time=... rows=1 loops=1) Buffers: ... -> Seq Scan on event_log (cost=... ) (actual time=... ) Filter: (payload @> '{"promo": true, "kanal": 1, "perangkat": 3}'::jsonb) Rows Removed by Filter: ... Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+CREATE INDEX ev_payload_gin
+ON lab6.event_log USING gin (payload);
+ANALYZE lab6.event_log;
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*)
+FROM lab6.event_log
+WHERE payload @> '{"promo": true, "kanal": 1, "perangkat": 3}';
+
+============================================================
+RUN 1
+============================================================
+
+Aggregate (cost=... ) (actual time=... rows=1 loops=1) Buffers: ... -> Bitmap Heap Scan on event_log (cost=... ) (actual time=... ) Recheck Cond: (payload @> '{"promo": true, "kanal": 1, "perangkat": 3}'::jsonb) Rows Removed by Index Recheck: ... Buffers: ... -> Bitmap Index Scan on ev_payload_gin (cost=... ) (actual time=... ) Index Cond: (payload @> '{"promo": true, "kanal": 1, "perangkat": 3}'::jsonb) Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+============================================================
+RUN 2
+============================================================
+
+Aggregate (cost=... ) (actual time=... rows=1 loops=1) Buffers: ... -> Bitmap Heap Scan on event_log (cost=... ) (actual time=... ) Recheck Cond: (payload @> '{"promo": true, "kanal": 1, "perangkat": 3}'::jsonb) Rows Removed by Index Recheck: ... Buffers: ... -> Bitmap Index Scan on ev_payload_gin (cost=... ) (actual time=... ) Index Cond: (payload @> '{"promo": true, "kanal": 1, "perangkat": 3}'::jsonb) Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+============================================================
+RUN 3
+============================================================
+
+Aggregate (cost=... ) (actual time=... rows=1 loops=1) Buffers: ... -> Bitmap Heap Scan on event_log (cost=... ) (actual time=... ) Recheck Cond: (payload @> '{"promo": true, "kanal": 1, "perangkat": 3}'::jsonb) Rows Removed by Index Recheck: ... Buffers: ... -> Bitmap Index Scan on ev_payload_gin (cost=... ) (actual time=... ) Index Cond: (payload @> '{"promo": true, "kanal": 1, "perangkat": 3}'::jsonb) Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+CREATE INDEX ev_payload_gin_path
+ON lab6.event_log USING gin (payload jsonb_path_ops);
+
+============================================================
+RINGKASAN
+============================================================
+
+Fastest : ... ms
+Median   : ... ms
+Plan     : Bitmap Heap Scan -> Bitmap Index Scan
+Sort     : Tidak
+
+Penjelasan:
+- JSONB containment dengan @> cocok untuk GIN index.
+- jsonb_ops default lebih umum, sedangkan jsonb_path_ops lebih kecil/lebih hemat ruang untuk path-based queries.
+- Hasil final menunjukkan trade-off antara ruang indeks dan kinerja.
