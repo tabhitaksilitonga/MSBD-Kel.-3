@@ -1,0 +1,77 @@
+Q20 - BRIN vs B-TREE PADA terjadi_pada
+
+Query:
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*)
+FROM lab6.event_log
+WHERE terjadi_pada >= timestamptz '2024-06-01 00:00+07'
+  AND terjadi_pada <  timestamptz '2024-06-02 00:00+07';
+
+SELECT attname, correlation
+FROM pg_stats
+WHERE schemaname = 'lab6' AND tablename = 'event_log'
+  AND attname IN ('terjadi_pada', 'customer_id');
+
+============================================================
+RUN 1
+============================================================
+
+Aggregate (cost=... ) (actual time=... rows=1 loops=1) Buffers: ... -> Seq Scan on event_log (cost=... ) (actual time=... ) Filter: ((terjadi_pada >= '2024-06-01 00:00:00+07'::timestamp with time zone) AND (terjadi_pada < '2024-06-02 00:00:00+07'::timestamp with time zone)) Rows Removed by Filter: ... Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+============================================================
+RUN 2
+============================================================
+
+Aggregate (cost=... ) (actual time=... rows=1 loops=1) Buffers: ... -> Seq Scan on event_log (cost=... ) (actual time=... ) Filter: ((terjadi_pada >= '2024-06-01 00:00:00+07'::timestamp with time zone) AND (terjadi_pada < '2024-06-02 00:00:00+07'::timestamp with time zone)) Rows Removed by Filter: ... Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+============================================================
+RUN 3
+============================================================
+
+Aggregate (cost=... ) (actual time=... rows=1 loops=1) Buffers: ... -> Seq Scan on event_log (cost=... ) (actual time=... ) Filter: ((terjadi_pada >= '2024-06-01 00:00:00+07'::timestamp with time zone) AND (terjadi_pada < '2024-06-02 00:00:00+07'::timestamp with time zone)) Rows Removed by Filter: ... Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+CREATE INDEX ev_ts_brin
+ON lab6.event_log USING brin (terjadi_pada);
+ANALYZE lab6.event_log;
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*)
+FROM lab6.event_log
+WHERE terjadi_pada >= timestamptz '2024-06-01 00:00+07'
+  AND terjadi_pada <  timestamptz '2024-06-02 00:00+07';
+
+============================================================
+RUN 1
+============================================================
+
+Aggregate (cost=... ) (actual time=... rows=1 loops=1) Buffers: ... -> Bitmap Heap Scan on event_log (cost=... ) (actual time=... ) Recheck Cond: ((terjadi_pada >= '2024-06-01 00:00:00+07'::timestamp with time zone) AND (terjadi_pada < '2024-06-02 00:00:00+07'::timestamp with time zone)) Buffers: ... -> Bitmap Index Scan on ev_ts_brin (cost=... ) (actual time=... ) Index Cond: ((terjadi_pada >= '2024-06-01 00:00:00+07'::timestamp with time zone) AND (terjadi_pada < '2024-06-02 00:00:00+07'::timestamp with time zone)) Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+============================================================
+RUN 2
+============================================================
+
+Aggregate (cost=... ) (actual time=... rows=1 loops=1) Buffers: ... -> Bitmap Heap Scan on event_log (cost=... ) (actual time=... ) Recheck Cond: ((terjadi_pada >= '2024-06-01 00:00:00+07'::timestamp with time zone) AND (terjadi_pada < '2024-06-02 00:00:00+07'::timestamp with time zone)) Buffers: ... -> Bitmap Index Scan on ev_ts_brin (cost=... ) (actual time=... ) Index Cond: ((terjadi_pada >= '2024-06-01 00:00:00+07'::timestamp with time zone) AND (terjadi_pada < '2024-06-01 00:00:00+07'::timestamp with time zone)) Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+============================================================
+RUN 3
+============================================================
+
+Aggregate (cost=... ) (actual time=... rows=1 loops=1) Buffers: ... -> Bitmap Heap Scan on event_log (cost=... ) (actual time=... ) Recheck Cond: ((terjadi_pada >= '2024-06-01 00:00:00+07'::timestamp with time zone) AND (terjadi_pada < '2024-06-02 00:00:00+07'::timestamp with time zone)) Buffers: ... -> Bitmap Index Scan on ev_ts_brin (cost=... ) (actual time=... ) Index Cond: ((terjadi_pada >= '2024-06-01 00:00:00+07'::timestamp with time zone) AND (terjadi_pada < '2024-06-02 00:00:00+07'::timestamp with time zone)) Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+CREATE INDEX ev_ts_btree
+ON lab6.event_log (terjadi_pada);
+ANALYZE lab6.event_log;
+
+============================================================
+RINGKASAN
+============================================================
+
+Fastest : ... ms
+Median   : ... ms
+Plan     : BRIN / B-tree / Bitmap Heap Scan
+Sort     : Tidak
+
+Penjelasan:
+- BRIN cocok kalau data terurut berdasarkan waktu dan ada korelasi fisik tinggi.
+- Kolom terjadi_pada berurutan waktu, jadi BRIN bisa sangat hemat ruang.
+- B-tree biasanya lebih cepat untuk pencarian exact/range yang sangat selektif, sementara BRIN unggul untuk ukuran index yang kecil dan data terurut.
