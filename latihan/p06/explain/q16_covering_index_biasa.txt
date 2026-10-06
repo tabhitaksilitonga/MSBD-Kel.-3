@@ -1,0 +1,52 @@
+Q16 - COVERING INDEX - COMPOSITE BIASA
+
+Query:
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT customer_id, terjadi_pada, jumlah
+FROM lab6.event_log
+WHERE customer_id BETWEEN 4200 AND 4300
+ORDER BY customer_id, terjadi_pada DESC;
+
+CREATE INDEX ev_cover_plain_idx
+ON lab6.event_log (customer_id, terjadi_pada DESC);
+
+============================================================
+RUN 1
+============================================================
+
+Index Scan using ev_cover_plain_idx on event_log (cost=... ) (actual time=... ) Index Cond: ((customer_id >= 4200) AND (customer_id <= 4300)) Order By: customer_id, terjadi_pada DESC Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+============================================================
+RUN 2
+============================================================
+
+Index Scan using ev_cover_plain_idx on event_log (cost=... ) (actual time=... ) Index Cond: ((customer_id >= 4200) AND (customer_id <= 4300)) Order By: customer_id, terjadi_pada DESC Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+============================================================
+RUN 3
+============================================================
+
+Index Scan using ev_cover_plain_idx on event_log (cost=... ) (actual time=... ) Index Cond: ((customer_id >= 4200) AND (customer_id <= 4300)) Order By: customer_id, terjadi_pada DESC Buffers: ... Planning Time: ... ms Execution Time: ... ms
+
+Ukuran index:
+SELECT c.relname AS indeks,
+       pg_size_pretty(pg_relation_size(c.oid)) AS ukuran,
+       pg_relation_size(c.oid) AS bytes
+FROM pg_index i
+JOIN pg_class c ON c.oid = i.indexrelid
+WHERE i.indrelid = 'lab6.event_log'::regclass
+ORDER BY c.relname;
+
+============================================================
+RINGKASAN
+============================================================
+
+Fastest : ... ms
+Median   : ... ms
+Plan     : Index Scan using ev_cover_plain_idx
+Sort     : Tidak
+
+Penjelasan:
+- Index (customer_id, terjadi_pada DESC) mendukung filter sekaligus order by.
+- Kolom jumlah tidak termasuk dalam index, jadi PostgreSQL masih harus mengambil data dari heap bila query memilih jumlah.
+- Ini bukan index covering karena jumlah tidak ada dalam leaf index.
