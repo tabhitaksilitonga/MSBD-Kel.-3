@@ -321,3 +321,403 @@ Berdasarkan percobaan Q6 sampai Q11, dapat disimpulkan bahwa isolation level ber
 Percobaan dirty read menunjukkan bahwa PostgreSQL tidak mengizinkan transaksi membaca perubahan yang belum di-commit. Sementara itu, percobaan lost update menunjukkan bahwa penggunaan nilai tetap yang dihitung dari saldo lama dapat menyebabkan pembaruan transaksi lain tertimpa.
 
 Oleh karena itu, pemilihan isolation level dan penggunaan mekanisme seperti UPDATE atomik, penguncian baris, serta optimistic locking sangat penting untuk menjaga konsistensi data dalam sistem basis data.
+
+### Q12. Mencegah Lost Update dengan Atomic Update
+
+#### 1. Tujuan
+
+Menguji penggunaan pembaruan atomik untuk mencegah lost update ketika dua transaksi mengubah saldo rekening yang sama.
+
+#### 2. Langkah Percobaan
+
+**Sesi A:**
+
+```
+BEGIN;
+
+UPDATE lab9.rekening
+SET saldo = saldo - 10000
+WHERE rekening_id = 1 AND saldo >= 10000;
+```
+
+**Sesi B:**
+
+```
+BEGIN;
+
+UPDATE lab9.rekening
+SET saldo = saldo - 10000
+WHERE rekening_id = 1 AND saldo >= 10000;
+```
+
+**Kembali ke Sesi A:**
+
+```
+COMMIT;
+```
+
+**Sesi B:**
+
+```
+COMMIT;
+
+SELECT saldo FROM lab9.rekening
+WHERE rekening_id = 1;
+```
+
+#### 3. Hasil dan Analisis
+
+Sesi A berhasil menjalankan pembaruan saldo dengan respons `UPDATE 1`. Pada mekanisme pembaruan atomik, Sesi B menunggu apabila Sesi A masih memegang lock pada rekening yang sama. Setelah lock dilepaskan, PostgreSQL melanjutkan pembaruan menggunakan saldo terbaru.
+
+Dengan kedua pembaruan berhasil, total pengurangan saldo adalah Rp20.000. Penggunaan operasi atomik memastikan kedua pengurangan diterapkan tanpa menimpa perubahan sebelumnya.
+
+#### 4. Kesimpulan
+
+Atomic update mencegah lost update karena perhitungan saldo dilakukan langsung berdasarkan nilai terbaru di database, bukan menggunakan nilai lama yang sebelumnya dibaca aplikasi.
+
+---
+
+### Q13. Mencegah Lost Update dengan SELECT FOR UPDATE
+
+#### 1. Tujuan
+
+Menguji penggunaan SELECT FOR UPDATE untuk mengunci baris rekening agar transaksi lain tidak dapat mengubah data yang sama secara bersamaan.
+
+#### 2. Langkah Percobaan
+
+**Sesi A:**
+
+```
+BEGIN;
+
+SELECT saldo FROM lab9.rekening
+WHERE rekening_id = 1 FOR UPDATE;
+
+UPDATE lab9.rekening
+SET saldo = saldo - 10000
+WHERE rekening_id = 1;
+```
+
+**Sesi B:**
+
+```
+BEGIN;
+
+SELECT saldo FROM lab9.rekening
+WHERE rekening_id = 1 FOR UPDATE;
+```
+
+**Kembali ke Sesi A:**
+
+```
+COMMIT;
+```
+
+**Sesi B:**
+
+```
+UPDATE lab9.rekening
+SET saldo = saldo - 10000
+WHERE rekening_id = 1;
+
+COMMIT;
+
+SELECT saldo FROM lab9.rekening
+WHERE rekening_id = 1;
+```
+
+#### 3. Hasil dan Analisis
+
+Sesi A menggunakan SELECT FOR UPDATE untuk mengunci rekening 1 sebelum melakukan perubahan saldo. Ketika Sesi B meminta lock pada baris yang sama, permintaan tersebut tertahan sampai Sesi A menyelesaikan transaksi.
+
+Setelah Sesi A melakukan COMMIT, Sesi B memperoleh lock dan dapat melanjutkan pembaruan. Pengurangan saldo sebesar Rp10.000 pada masing-masing transaksi dapat diterapkan secara berurutan tanpa saling menimpa.
+
+#### 4. Kesimpulan
+
+SELECT FOR UPDATE mencegah lost update dengan mengatur akses terhadap baris yang sama. Transaksi kedua harus menunggu sampai transaksi pertama selesai sebelum melakukan pembaruan.
+
+---
+
+### Q14. Mencegah Lost Update dengan Versioning
+
+#### 1. Tujuan
+
+Menguji optimistic locking menggunakan kolom version_no untuk mendeteksi perubahan data yang dilakukan oleh transaksi lain.
+
+#### 2. Langkah Percobaan
+
+**Setup:**
+
+```
+ALTER TABLE lab9.rekening
+ADD COLUMN IF NOT EXISTS version_no INT DEFAULT 1;
+
+UPDATE lab9.rekening
+SET version_no = 1
+WHERE rekening_id = 1;
+```
+
+**Sesi A:**
+
+```
+BEGIN;
+
+SELECT saldo, version_no
+FROM lab9.rekening
+WHERE rekening_id = 1;
+```
+
+**Sesi B:**
+
+```
+BEGIN;
+
+SELECT saldo, version_no
+FROM lab9.rekening
+WHERE rekening_id = 1;
+```
+
+**Sesi A:**
+
+```
+UPDATE lab9.rekening
+SET saldo = saldo - 10000,
+    version_no = version_no + 1
+WHERE rekening_id = 1 AND version_no = 1;
+
+COMMIT;
+```
+
+**Sesi B:**
+
+```
+UPDATE lab9.rekening
+SET saldo = saldo - 10000,
+    version_no = version_no + 1
+WHERE rekening_id = 1 AND version_no = 1;
+
+COMMIT;
+```
+
+**Cek Hasil:**
+
+```
+SELECT rekening_id, saldo, version_no
+FROM lab9.rekening
+WHERE rekening_id = 1;
+```
+
+#### 3. Hasil dan Analisis
+
+Kedua sesi membaca version_no bernilai 1. Sesi A melakukan pembaruan terlebih dahulu sehingga saldo berkurang Rp10.000 dan version_no meningkat menjadi 2.
+
+Ketika Sesi B mencoba memperbarui data dengan kondisi version_no = 1, PostgreSQL tidak menemukan baris yang memenuhi syarat tersebut. Perintah UPDATE menghasilkan `UPDATE 0`, sehingga pembaruan kedua tidak dilakukan.
+
+Mekanisme ini memungkinkan aplikasi mengetahui bahwa data telah berubah sejak pembacaan awal.
+
+#### 4. Kesimpulan
+
+Versioning dapat mencegah lost update dengan memeriksa kesesuaian versi sebelum memperbarui data. Jika versi berubah, aplikasi dapat mendeteksi konflik dan melakukan pembacaan ulang sebelum mencoba transaksi kembali.
+
+---
+
+### Q15. Menguji MVCC dan Snapshot
+
+#### 1. Tujuan
+
+Mengamati bagaimana MVCC memungkinkan transaksi membaca data ketika transaksi lain sedang melakukan perubahan yang belum di-commit.
+
+#### 2. Langkah Percobaan
+
+**Sesi A:**
+
+```
+BEGIN;
+
+SELECT saldo FROM lab9.rekening
+WHERE rekening_id = 1;
+```
+
+**Sesi B:**
+
+```
+BEGIN;
+
+UPDATE lab9.rekening
+SET saldo = saldo + 50000
+WHERE rekening_id = 1;
+```
+
+**Sesi A:**
+
+```
+SELECT saldo FROM lab9.rekening
+WHERE rekening_id = 1;
+```
+
+**Sesi B:**
+
+```
+COMMIT;
+```
+
+**Sesi A:**
+
+```
+SELECT saldo FROM lab9.rekening
+WHERE rekening_id = 1;
+
+COMMIT;
+```
+
+#### 3. Hasil dan Analisis
+
+Pada isolation level READ COMMITTED, Sesi A tetap membaca saldo lama ketika perubahan Sesi B belum di-commit. Pembacaan tersebut tidak terhalang meskipun Sesi B sedang memperbarui baris yang sama.
+
+Setelah Sesi B melakukan COMMIT, pembacaan berikutnya pada Sesi A menampilkan saldo yang sudah bertambah Rp50.000. Perubahan ini menunjukkan bahwa setiap perintah SELECT pada READ COMMITTED menggunakan snapshot yang dapat berbeda.
+
+MVCC memungkinkan PostgreSQL menyediakan versi data yang sesuai untuk transaksi pembaca tanpa selalu menunggu transaksi penulis selesai.
+
+#### 4. Kesimpulan
+
+MVCC membantu meningkatkan konkurensi dengan memungkinkan transaksi membaca data berdasarkan snapshot. Pada READ COMMITTED, perubahan transaksi lain mulai terlihat setelah COMMIT dan pada pembacaan berikutnya.
+
+---
+
+### Q16. Mengamati Metadata xmin dan xmax
+
+#### 1. Tujuan
+
+Mengamati perubahan metadata transaksi xmin dan xmax pada PostgreSQL setelah suatu baris diperbarui.
+
+#### 2. Langkah Percobaan
+
+**Sesi A:**
+
+```
+BEGIN;
+
+SELECT rekening_id, pemilik, saldo, xmin, xmax
+FROM lab9.rekening
+WHERE rekening_id = 1;
+```
+
+**Sesi B:**
+
+```
+BEGIN;
+
+UPDATE lab9.rekening
+SET saldo = saldo + 10000
+WHERE rekening_id = 1;
+
+COMMIT;
+```
+
+**Sesi A:**
+
+```
+SELECT rekening_id, pemilik, saldo, xmin, xmax
+FROM lab9.rekening
+WHERE rekening_id = 1;
+
+COMMIT;
+```
+
+**Cek Hasil:**
+
+```
+SELECT rekening_id, pemilik, saldo, xmin, xmax
+FROM lab9.rekening
+WHERE rekening_id = 1;
+```
+
+#### 3. Hasil dan Analisis
+
+Setelah Sesi B melakukan UPDATE dan COMMIT, PostgreSQL membuat versi baris baru sehingga nilai xmin pada versi terbaru berubah. Nilai xmax pada versi terbaru umumnya bernilai 0.
+
+Pada READ COMMITTED, Sesi A dapat membaca versi terbaru setelah perubahan Sesi B di-commit. Metadata xmin menunjukkan transaksi yang membuat versi baris, sedangkan xmax berkaitan dengan transaksi yang menghapus, memperbarui, atau mengunci baris tersebut.
+
+Kedua nilai ini merupakan metadata internal PostgreSQL dan bukan bagian dari data bisnis rekening.
+
+#### 4. Kesimpulan
+
+Metadata xmin dan xmax digunakan PostgreSQL untuk membantu mengelola versi baris dalam MVCC. Namun, keduanya tidak cukup digunakan sendiri untuk menentukan seluruh status visibilitas suatu baris.
+
+---
+
+### Q17. Mengamati Manfaat MVCC dan VACUUM
+
+#### 1. Tujuan
+
+Memahami manfaat MVCC dalam pengelolaan versi data serta fungsi VACUUM untuk membersihkan versi baris lama yang sudah tidak diperlukan.
+
+#### 2. Langkah Percobaan
+
+**Sesi A:**
+
+```
+SELECT rekening_id, pemilik, saldo, xmin, xmax
+FROM lab9.rekening
+WHERE rekening_id = 1;
+```
+
+**Sesi B:**
+
+```
+BEGIN;
+
+UPDATE lab9.rekening
+SET saldo = saldo + 10000
+WHERE rekening_id = 1;
+
+UPDATE lab9.rekening
+SET saldo = saldo + 20000
+WHERE rekening_id = 1;
+
+COMMIT;
+```
+
+**Sesi A:**
+
+```
+SELECT rekening_id, pemilik, saldo, xmin, xmax
+FROM lab9.rekening
+WHERE rekening_id = 1;
+```
+
+**Menjalankan VACUUM:**
+
+```
+VACUUM VERBOSE lab9.rekening;
+```
+
+**Cek Hasil:**
+
+```
+SELECT rekening_id, pemilik, saldo, xmin, xmax
+FROM lab9.rekening
+WHERE rekening_id = 1;
+```
+
+#### 3. Hasil dan Analisis
+
+Dua perintah UPDATE pada Sesi B menambah saldo sebesar Rp10.000 dan Rp20.000, sehingga total penambahan menjadi Rp30.000. PostgreSQL membuat versi baris baru untuk mendukung mekanisme MVCC.
+
+Perintah VACUUM digunakan untuk membersihkan versi baris lama yang sudah tidak diperlukan oleh transaksi aktif. Proses ini membantu mengurangi penumpukan data yang tidak terpakai tanpa mengubah saldo pada baris aktif.
+
+VACUUM juga membantu menjaga efisiensi penyimpanan dan mendukung kinerja database dalam jangka panjang.
+
+#### 4. Kesimpulan
+
+MVCC memungkinkan transaksi berjalan bersamaan tanpa selalu saling menghalangi. VACUUM diperlukan untuk mengelola versi baris lama agar penggunaan penyimpanan tetap efisien dan kinerja PostgreSQL terjaga.
+
+---
+
+## Kesimpulan Umum Q12–Q17
+
+Pengujian Q12–Q17 membahas tiga mekanisme pencegahan lost update, yaitu atomic update, SELECT FOR UPDATE, dan optimistic locking menggunakan versioning. Ketiganya memiliki pendekatan berbeda dalam menjaga konsistensi perubahan data ketika beberapa transaksi mengakses rekening yang sama.
+
+MVCC memungkinkan PostgreSQL mengelola beberapa versi baris sehingga transaksi pembaca tidak selalu terhalang oleh transaksi penulis. Metadata xmin dan xmax membantu pengelolaan versi tersebut, sedangkan VACUUM membersihkan versi lama yang sudah tidak diperlukan.
+
+Pemilihan mekanisme transaksi yang tepat dapat membantu menjaga konsistensi data dan mengurangi masalah konkurensi dalam sistem basis data.
