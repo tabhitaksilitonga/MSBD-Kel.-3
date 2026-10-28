@@ -281,3 +281,100 @@ VACUUM VERBOSE lab9.rekening;
 
 Hasil: Setelah Sesi B melakukan UPDATE dan COMMIT, saldo bertambah Rp30.000 dan PostgreSQL membuat versi baris baru melalui MVCC. Perintah VACUUM membantu membersihkan versi baris lama yang sudah tidak diperlukan sehingga penggunaan penyimpanan lebih efisien. VACUUM tidak mengubah saldo maupun data aktif pada tabel.
 
+Q18: Membandingkan FOR UPDATE, FOR NO KEY UPDATE, FOR SHARE, dan FOR KEY SHARE
+
+### Sesi A:
+BEGIN;
+SELECT * FROM lab9.rekening WHERE rekening_id = 1 FOR UPDATE;
+
+### Sesi B:
+BEGIN;
+SELECT * FROM lab9.rekening WHERE rekening_id = 1 FOR SHARE;
+
+### Sesi A:
+COMMIT;
+
+### Sesi B:
+COMMIT;
+
+Hasil: Sesi B terhalang (blocked/waiting) saat mencoba mengeksekusi FOR SHARE karena Sesi A sedang memegang kunci eksklusif (FOR UPDATE) pada baris rekening_id = 1. Setelah Sesi A melakukan COMMIT, kunci dilepaskan dan kueri Sesi B baru berhasil dieksekusi.
+
+Q19: Menguji Behavior Antrean Lock (Blocking)
+
+### Sesi A:
+BEGIN;
+SELECT * FROM lab9.rekening WHERE rekening_id = 1 FOR UPDATE;
+
+### Sesi B:
+BEGIN;
+SELECT * FROM lab9.rekening WHERE rekening_id = 1 FOR UPDATE;
+
+### Sesi A:
+COMMIT;
+
+### Sesi B:
+COMMIT;
+
+Hasil: Sesi B mengalami lock waiting (blocking) saat mencoba mengeksekusi FOR UPDATE pada baris rekening_id = 1 yang sedang dikunci eksklusif oleh Sesi A. Setelah Sesi A melalukan COMMIT, kunci dilepaskan dan Sesi B langsung mendapatkan lock lalu menyelesaikan kuerinya.
+
+
+Q20: Mereproduksi Deadlock (Error 40P01)
+
+### Sesi A:
+BEGIN;
+SELECT * FROM lab9.rekening WHERE rekening_id = 1 FOR UPDATE;
+
+### Sesi B:
+BEGIN;
+SELECT * FROM lab9.rekening WHERE rekening_id = 2 FOR UPDATE;
+
+### Sesi A:
+SELECT * FROM lab9.rekening WHERE rekening_id = 2 FOR UPDATE;
+
+### Sesi B:
+SELECT * FROM lab9.rekening WHERE rekening_id = 1 FOR UPDATE;
+
+### Sesi A:
+ROLLBACK;
+
+### Sesi B:
+ROLLBACK;
+
+Hasil: Terjadi deadlock karena Sesi A memegang kunci rekening 1 dan menunggu kunci rekening 2, sedangkan Sesi B memegang kunci rekening 2 dan menunggu kunci rekening 1. PostgreSQL secara otomatis membatalkan transaksi di Sesi B dengan memicu error: "ERROR: deadlock detected" (SQLSTATE 40P01).
+
+
+Q21: Mencegah Deadlock dengan Urutan Penguncian Konsisten
+
+### Sesi A:
+BEGIN;
+SELECT * FROM lab9.rekening WHERE rekening_id = 1 FOR UPDATE;
+
+### Sesi B:
+BEGIN;
+SELECT * FROM lab9.rekening WHERE rekening_id = 1 FOR UPDATE;
+
+### Sesi A:
+SELECT * FROM lab9.rekening WHERE rekening_id = 2 FOR UPDATE;
+COMMIT;
+
+### Sesi B:
+SELECT * FROM lab9.rekening WHERE rekening_id = 2 FOR UPDATE;
+COMMIT;
+
+Hasil: Deadlock dapat dihindari sepenuhnya jika semua transaksi menyelaraskan urutan penguncian baris (selalu mengakses rekening_id dari yang terkecil ke terbesar). Sesi B hanya mengalami antrean lock biasa (lock waiting) tanpa memicu konflik melingkar (circular dependency).
+
+
+Q22: Menjelaskan Perbedaan Deadlock dan Antrean Lock Panjang
+
+Hasil: 
+- Antrean Lock Panjang (Lock Waiting): Kondisi di mana suatu transaksi menunggu transaksi lain melepaskan kunci baris. Kondisi ini bersifat pasif dan aman bagi konsistensi data, namun membuat respon aplikasi menjadi lambat (hang).
+- Deadlock: Kondisi konflik melingkar di mana dua atau lebih transaksi saling menunggu kunci yang dipegang transaksi lawan secara permanen. PostgreSQL harus membatalkan (abort) salah satu transaksi secara aktif demi menyelamatkan sistem.
+
+
+Q23: Membandingkan Fungsi Timeout pada PostgreSQL
+
+Hasil:
+- lock_timeout: Batas waktu maksimal suatu kueri menunggu untuk mendapatkan kunci (lock). Jika waktu habis sebelum lock didapatkan, kueri dibatalkan.
+- statement_timeout: Batas waktu maksimal total eksekusi suatu kueri/pernyataan SQL dari awal hingga selesai.
+- idle_in_transaction_session_timeout: Batas waktu maksimal suatu sesi dibiarkan menganggur (tanpa aktivitas) di dalam transaksi yang masih terbuka (antara BEGIN dan COMMIT/ROLLBACK).
+- deadlock_timeout: Waktu tunggu PostgreSQL sebelum melakukan pemeriksaan aktif apakah terjadi deadlock pada antrean lock.
