@@ -1,0 +1,29 @@
+def q13_rollback_aplikasi():
+    print("\n--- Q13: Rollback dari Aplikasi ---")
+
+    def hitung_rental_tx():
+        with psycopg.connect(DSN) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT count(*) FROM lab5.rental_tx")
+                return cur.fetchone()[0]
+
+    sebelum = hitung_rental_tx()
+    print(f"Jumlah baris rental_tx SEBELUM: {sebelum}")
+
+    try:
+        with psycopg.connect(DSN) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "CALL lab5.process_rental(%s, %s, %s, %s)", (1, 1, 1, 4.99)
+                )
+            raise RuntimeError("gagal di tengah alur")
+    except RuntimeError as e:
+        print(f"Exception ditangkap di Python: {e}")
+
+    sesudah = hitung_rental_tx()
+    print(f"Jumlah baris rental_tx SESUDAH: {sesudah}")
+    if sebelum == sesudah:
+        print("Rollback otomatis TERBUKTI: jumlah baris tidak berubah.")
+    else:
+        print("PERINGATAN: jumlah baris berubah, rollback tidak terjadi seperti dugaan.")
+    return sebelum, sesudah
