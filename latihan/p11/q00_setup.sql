@@ -1,5 +1,5 @@
 
--- Ekstensi untuk Hashing (Persiapan Q19)
+-- Ekstensi untuk Hashing dan Enkripsi (Q19-Q21)
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- 1. Buat Peran (Sesuai Konsep Lapis Peran)
@@ -27,6 +27,7 @@ GRANT INSERT, UPDATE, DELETE ON TABLES TO app_write;
 SET ROLE skema_owner;
 
 -- 3. Struktur Tabel
+
 CREATE TABLE lab11.tenant (
     id INT PRIMARY KEY,
     nama VARCHAR(50)
@@ -39,6 +40,7 @@ CREATE TABLE lab11.pelanggan (
     kota VARCHAR(50),
     nik VARCHAR(16),
     surel VARCHAR(100),
+    rekening VARCHAR(30),
     lahir DATE,
     saldo NUMERIC,
     dibuat_pada TIMESTAMP DEFAULT now()
@@ -78,7 +80,7 @@ VALUES
 
 -- 30.000 Pelanggan (10.000 per tenant)
 INSERT INTO lab11.pelanggan (
-    id, tenant_id, nama, kota, nik, surel, lahir, saldo
+    id, tenant_id, nama, kota, nik, surel, rekening, lahir, saldo
 )
 SELECT
     i,
@@ -87,6 +89,7 @@ SELECT
     CASE WHEN i % 2 = 0 THEN 'Medan' ELSE 'Jakarta' END,
     '123456789012' || lpad((i % 10000)::text, 4, '0'),
     'user' || i || '@contoh.ac.id',
+    '1234567890' || lpad(i::text, 4, '0'),
     '1970-01-01'::DATE + (i % 20000),
     (i % 1000) * 1000.50
 FROM generate_series(1, 30000) s(i);

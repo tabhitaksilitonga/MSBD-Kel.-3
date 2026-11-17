@@ -223,6 +223,158 @@ WHERE n.nspname = 'lab11'
 3. Konteks tenant dapat tertinggal atau dimanipulasi jika pengaturan koneksi tidak dilakukan dengan benar. Solusinya adalah menggunakan SET LOCAL dalam transaksi dan memastikan identitas tenant berasal dari proses autentikasi yang tepercaya.
 Hasil pemeriksaan menunjukkan bahwa RLS dan FORCE RLS pada tabel pelanggan sudah aktif. Selain itu, pengujian pada Q09 dan Q10 juga menjadi bukti bahwa celah terkait pemilik tabel, BYPASSRLS, dan konteks tenant sudah diuji.
 
+### Q19 – Hashing vs Enkripsi
+**Perintah:**
+> SELECT
+    crypt('password123', gen_salt('bf', 8)) AS hash_pertama,
+    crypt('password123', gen_salt('bf', 8)) AS hash_kedua;
+
+**Keluaran:**
+> latihan=# SELECT
+    crypt('password123', gen_salt('bf', 8)) AS hash_1,
+    crypt('password123', gen_salt('bf', 8)) AS hash_2;
+                            hash_1                            |                            hash_2                            
+--------------------------------------------------------------+--------------------------------------------------------------
+ $2a$08$YPzb48EhD5Den7Dtrcg0teko5PQ1udMDw70JY3LLozj8U0l1pQhJK | $2a$08$Uk/yg3RETLoztkYyVY8mTu6pQM.HryFqK2yiBq5uyBG3OwE5pDAom
+(1 row)
+
+**Alasan Keputusan:**
+>Pada tahap ini dilakukan hashing kata sandi menggunakan algoritma bcrypt. Penggunaan salt membuat hasil hash dari kata sandi yang sama menjadi berbeda sehingga mengurangi risiko serangan menggunakan tabel hash yang sudah tersedia (rainbow table).
+
+### Q20 – Pengukuran Biaya Kerja
+**Perintah:**
+> EXPLAIN ANALYZE
+SELECT crypt('password123', gen_salt('bf', 6));
+
+EXPLAIN ANALYZE
+SELECT crypt('password123', gen_salt('bf', 10));
+
+EXPLAIN ANALYZE
+SELECT md5('password123');
+
+**Keluaran:**
+> Bcrypt cost 6:
+Execution Time: 6.444 ms
+
+Bcrypt cost 10:
+Execution Time: 60.383 ms
+
+MD5:
+Execution Time: 0.036 ms
+
+**Alasan Keputusan:**
+> Pada tahap ini dilakukan pengukuran waktu eksekusi bcrypt dengan cost 6, bcrypt dengan cost 10, dan MD5. Pengujian ini bertujuan membandingkan biaya komputasi masing-masing metode. Bcrypt dipilih untuk hashing kata sandi karena prosesnya lebih lambat sehingga lebih sulit diserang menggunakan brute force.
+
+### Q21 – Enkripsi Kolom Rekening
+**Perintah:**
+> SET app.kunci_kolom = 'kunci-lab11-jangan-dipakai-di-produksi';
+
+ALTER TABLE lab11.pelanggan
+ADD COLUMN rekening_enc BYTEA;
+
+UPDATE lab11.pelanggan
+SET rekening_enc = pgp_sym_encrypt(
+    rekening,
+    current_setting('app.kunci_kolom')
+)
+WHERE id <= 1000;
+
+SELECT pgp_sym_decrypt(
+    rekening_enc,
+    current_setting('app.kunci_kolom')
+)
+FROM lab11.pelanggan
+WHERE id = 1;
+
+SELECT
+    pgp_sym_encrypt('x', 'k') =
+    pgp_sym_encrypt('x', 'k') AS sama;
+
+**Keluaran:**
+> Hasil pengujian pada pelanggan dengan ID 3 menunjukkan bahwa sudah_terenkripsi bernilai true dan hasil dekripsi sama dengan rekening asli, yaitu 12345678900003.
+
+Berdasarkan query COUNT(*), terdapat tepat 1.000 baris yang berhasil dienkripsi. Pengujian perbandingan ciphertext menghasilkan false, yang menunjukkan bahwa dua proses enkripsi terhadap plaintext dan kunci yang sama menghasilkan ciphertext berbeda.
+
+**Alasan Keputusan:**
+> Pada tahap ini dilakukan enkripsi kolom rekening menggunakan pgp_sym_encrypt() dengan kunci simetris. Enkripsi dipilih karena data rekening perlu dikembalikan ke bentuk aslinya ketika dibutuhkan. Berbeda dengan hashing, enkripsi memungkinkan proses dekripsi menggunakan kunci yang sesuai.
+
+### Q22 – Pemeriksaan Kebocoran Kunci
+**Perintah:**
+> SELECT
+    pid,
+    usename,
+    query,
+    state
+FROM pg_stat_activity
+WHERE datname = current_database();
+
+**Keluaran:**
+> Berdasarkan hasil pengujian, sesi pertama berhasil membaca kunci enkripsi melalui current_setting('app.kunci_kolom'), yaitu kunci-lab11-jangan-dipakai-di-produksi. Sesi kedua dapat melihat aktivitas dan teks query sesi pertama melalui pg_stat_activity, tetapi nilai kunci tidak muncul langsung pada hasil pemeriksaan yang dilakukan. Hal ini menunjukkan bahwa konfigurasi kunci bersifat khusus untuk sesi PostgreSQL yang menyimpannya.
+
+**Alasan Keputusan:**
+> Pada tahap ini dilakukan pemeriksaan aktivitas database melalui pg_stat_activity untuk mengetahui apakah query enkripsi menampilkan kunci atau data dalam bentuk teks asli. Pemeriksaan ini penting karena kunci yang terekspos dapat dimanfaatkan pihak tidak berwenang untuk membuka data terenkripsi.
+
+### Q23 – Penyamaran Data (Data Masking)
+**Perintah:**
+> REVOKE pg_read_all_data FROM app_analitik;
+
+CREATE VIEW lab11.v_pelanggan_samar
+WITH (security_barrier = true) AS
+SELECT
+    id,
+    tenant_id,
+    left(nama, 1) || repeat('*', greatest(length(nama)-1, 1)) AS nama,
+    'xxxxxxxxxxxx' || right(nik, 4) AS nik,
+    regexp_replace(surel, '^[^@]+', '****') AS surel,
+    date_trunc('year', lahir)::date AS lahir_tahun,
+    kota,
+    round(saldo, -5) AS saldo_bulat
+FROM lab11.pelanggan;
+
+REVOKE ALL ON lab11.pelanggan FROM app_analitik;
+
+GRANT SELECT ON lab11.v_pelanggan_samar TO app_analitik;
+
+**Keluaran:**
+> latihan=> SELECT * FROM lab11.pelanggan LIMIT 5;
+ERROR:  permission denied for table pelanggan
+latihan=> SELECT * FROM lab11.v_pelanggan_samar LIMIT 5;
+  id  | nama |     nik      | surel | tahun_lahir |  kota   | saldo 
+------+------+--------------+-------+-------------+---------+-------
+ 1001 | P*** | 1234******** | us*** | 1972-01-01  | Jakarta |  1000
+ 1002 | P*** | 1234******** | us*** | 1972-01-01  | Medan   |  2000
+ 1003 | P*** | 1234******** | us*** | 1972-01-01  | Jakarta |  3000
+ 1004 | P*** | 1234******** | us*** | 1972-01-01  | Medan   |  4000
+ 1005 | P*** | 1234******** | us*** | 1972-01-01  | Jakarta |  5000
+(5 rows)
+
+Pengujian menggunakan akun app_analitik menunjukkan bahwa akses langsung ke tabel lab11.pelanggan ditolak dengan pesan permission denied for table pelanggan. Namun, akses ke view lab11.v_pelanggan_samar berhasil dan menampilkan data yang telah disamarkan, seperti nama menjadi P***, NIK menjadi 1234********, surel menjadi us***, tanggal lahir ditampilkan berdasarkan tahun, serta saldo dibulatkan ke ribuan terdekat.
+
+**Alasan Keputusan:**
+> Pada tahap ini dibuat VIEW untuk menampilkan data pelanggan dalam bentuk tersamar. Data seperti nama, NIK, dan surel disamarkan agar analis tetap dapat menggunakan informasi yang diperlukan tanpa melihat seluruh data sensitif. Hak akses diberikan hanya pada VIEW, bukan pada tabel aslinya.
+
+### Q24 – Identifikasi Ulang Data
+**Perintah:**
+> SELECT COUNT(*) AS kombinasi_asli
+FROM (
+    SELECT DISTINCT kota, lahir
+    FROM lab11.pelanggan
+) AS data_asli;
+
+SELECT COUNT(*) AS kombinasi_generalisasi
+FROM (
+    SELECT DISTINCT
+        kota,
+        date_trunc('year', lahir)::date AS tahun_lahir
+    FROM lab11.pelanggan
+) AS data_generalisasi;
+
+**Keluaran:**
+> Dari total 30.000 pelanggan, ditemukan 20.000 kombinasi unik kota dan tanggal lahir. Setelah tanggal lahir digeneralisasi menjadi tahun lahir, jumlah kombinasi unik berkurang menjadi 110. Persentase pengurangan kombinasi unik mencapai 99,45%. Pengujian tambahan juga menemukan kombinasi kota dan tanggal lahir yang hanya dimiliki satu pelanggan.
+
+**Alasan Keputusan:**
+> Pada tahap ini dilakukan perbandingan jumlah kombinasi unik kota dan tanggal lahir sebelum dan sesudah generalisasi menjadi tahun kelahiran. Generalisasi dipilih untuk mengurangi detail informasi pribadi sehingga risiko identifikasi ulang terhadap pelanggan dapat dikurangi.
+
 ## Refleksi AΓÇôE
 
 ### Refleksi A
@@ -252,6 +404,9 @@ Sementara itu, tiga lapis pertahanan lainnya berperan sebagai **pertahanan berla
 2. **Row-Level Security / Isolasi Penyewa (RLS, bukti Q14):** Saat payload injeksi `22' OR '1'='1' --` dijalankan melalui koneksi `app_laporan`, kebijakan RLS menahan kebocoran data hanya pada penyewa aktif yang terikat pada sesi tersebut (maksimal 10.000 baris penyewa 1, bukan seluruh 30.000 baris lintas penyewa).
 3. **Batas Waktu Eksekusi (*Statement Timeout*, bukti Q18):** Pemasangan `ALTER ROLE app_portal SET statement_timeout = '5s';` mencegah penahanan sumber daya basis data sekaligus membuat percobaan *time-based blind SQL injection* (`pg_sleep`) langsung terputus pada detik ke-5 dan tercatat mencolok di log server dengan `SQLSTATE 57014` (`ERROR: canceling statement due to statement timeout`).
 
+### Reflektif D
+**Sebuah tim menyatakan basis datanya aman karena semua kolom peka sudah dienkripsi. Sebutkan dua ancaman yang tetap terbuka dan satu risiko operasional enkripsi kolom, masing-masing dengan bukti dari Q21–Q24.**
+> Meskipun semua kolom sensitif sudah dienkripsi, masih terdapat ancaman kebocoran kunci enkripsi yang dapat membuat pihak tidak berwenang membaca data asli, seperti yang diuji pada Q21 dan Q22. Selain itu, data yang sudah disamarkan masih berpotensi mengungkap identitas seseorang melalui kombinasi informasi seperti kota dan tanggal lahir, sebagaimana dibuktikan pada Q23 dan Q24. Risiko operasional lainnya adalah kehilangan kunci enkripsi, sehingga data yang sudah dienkripsi tidak dapat didekripsi kembali. Oleh karena itu, enkripsi harus disertai perlindungan kunci dan penyamaran data agar keamanan informasi lebih terjamin. 
 
 ## Peta Tiket #1134 ke UU PDP
 | Keluhan | Pasal relevan | Kontrol teknis pencegah | Bukti |

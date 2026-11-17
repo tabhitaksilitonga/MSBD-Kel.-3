@@ -1,12 +1,11 @@
-version: '3.8'
 services:
   lab11-db:
     image: postgres:17
     container_name: lab11-db
     environment:
-      POSTGRES_USER: postgres
+      POSTGRES_USER: msbd
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: msbd
+      POSTGRES_DB: latihan
     networks:
       - lab11_labnet
 
