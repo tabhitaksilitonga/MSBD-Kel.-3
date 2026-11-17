@@ -1,0 +1,22 @@
+version: '3.8'
+services:
+  lab11-db:
+    image: postgres:17
+    container_name: lab11-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: msbd
+    networks:
+      - lab11_labnet
+
+  lab11-web:
+    image: python:3.11-slim
+    container_name: lab11-web
+    command: sleep infinity
+    networks:
+      - lab11_labnet
+
+networks:
+  lab11_labnet:
+    internal: true
