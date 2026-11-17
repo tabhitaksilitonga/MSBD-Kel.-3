@@ -1,3 +1,4 @@
+
 -- Ekstensi untuk Hashing (Persiapan Q19)
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
@@ -12,8 +13,15 @@ CREATE ROLE app_analitik LOGIN;
 -- 2. Buat Skema
 CREATE SCHEMA lab11 AUTHORIZATION skema_owner;
 
-ALTER DEFAULT PRIVILEGES FOR ROLE skema_owner IN SCHEMA lab11 GRANT SELECT ON TABLES TO app_read;
-ALTER DEFAULT PRIVILEGES FOR ROLE skema_owner IN SCHEMA lab11 GRANT INSERT, UPDATE, DELETE ON TABLES TO app_write;
+-- Berikan hak akses penggunaan schema kepada role aplikasi
+GRANT USAGE ON SCHEMA lab11 TO app_read, app_write, app_analitik;
+
+-- Atur hak akses default untuk tabel yang dibuat oleh skema_owner
+ALTER DEFAULT PRIVILEGES FOR ROLE skema_owner IN SCHEMA lab11
+GRANT SELECT ON TABLES TO app_read;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE skema_owner IN SCHEMA lab11
+GRANT INSERT, UPDATE, DELETE ON TABLES TO app_write;
 
 -- Masuk sebagai pemilik untuk membuat tabel
 SET ROLE skema_owner;
@@ -52,22 +60,30 @@ CREATE TABLE lab11.transaksi (
 );
 
 -- 4. Injeksi Data Deterministik
+
 -- 3 Penyewa
-INSERT INTO lab11.tenant (id, nama) VALUES (1, 'Penyewa 1'), (2, 'Penyewa 2'), (3, 'Penyewa 3');
+INSERT INTO lab11.tenant (id, nama)
+VALUES
+    (1, 'Penyewa 1'),
+    (2, 'Penyewa 2'),
+    (3, 'Penyewa 3');
 
 -- 4 Akun (Berdasarkan Q13 Serangan Union)
-INSERT INTO lab11.akun (id, nama_pengguna, peran_aplikasi, status, kata_sandi) VALUES
-(1, 'sinta', 'operator', 'AKTIF', 'sandi123'),
-(2, 'bagas', 'penyelia', 'AKTIF', 'sandi123'),
-(3, 'ratna', 'operator', 'AKTIF', 'sandi123'),
-(4, 'yusuf', 'auditor', 'AKTIF', 'sandi123');
+INSERT INTO lab11.akun (id, nama_pengguna, peran_aplikasi, status, kata_sandi)
+VALUES
+    (1, 'sinta', 'operator', 'AKTIF', 'sandi123'),
+    (2, 'bagas', 'penyelia', 'AKTIF', 'sandi123'),
+    (3, 'ratna', 'operator', 'AKTIF', 'sandi123'),
+    (4, 'yusuf', 'auditor', 'AKTIF', 'sandi123');
 
 -- 30.000 Pelanggan (10.000 per tenant)
-INSERT INTO lab11.pelanggan (id, tenant_id, nama, kota, nik, surel, lahir, saldo)
-SELECT 
-    i, 
-    ((i - 1) / 10000) + 1, 
-    'Pelanggan ' || i, 
+INSERT INTO lab11.pelanggan (
+    id, tenant_id, nama, kota, nik, surel, lahir, saldo
+)
+SELECT
+    i,
+    ((i - 1) / 10000) + 1,
+    'Pelanggan ' || i,
     CASE WHEN i % 2 = 0 THEN 'Medan' ELSE 'Jakarta' END,
     '123456789012' || lpad((i % 10000)::text, 4, '0'),
     'user' || i || '@contoh.ac.id',
@@ -77,10 +93,11 @@ FROM generate_series(1, 30000) s(i);
 
 -- 120.000 Transaksi (4 per pelanggan)
 INSERT INTO lab11.transaksi (id, pelanggan_id, jumlah)
-SELECT 
-    i, 
-    ((i - 1) / 4) + 1, 
+SELECT
+    i,
+    ((i - 1) / 4) + 1,
     (i % 100) * 50.00
 FROM generate_series(1, 120000) s(i);
 
+-- Kembali ke role awal
 RESET ROLE;
