@@ -1,0 +1,1 @@
+REVOKE DROP ON lab11.akun FROM skema_owner;
