@@ -1,0 +1,21 @@
+services:
+  lab11-db:
+    image: postgres:17
+    container_name: lab11-db
+    environment:
+      POSTGRES_USER: msbd
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: latihan
+    networks:
+      - lab11_labnet
+
+  lab11-web:
+    image: python:3.11-slim
+    container_name: lab11-web
+    command: sleep infinity
+    networks:
+      - lab11_labnet
+
+networks:
+  lab11_labnet:
+    internal: true
