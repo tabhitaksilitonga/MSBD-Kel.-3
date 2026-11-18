@@ -3,13 +3,13 @@
 ## Identitas Kelompok
 | Nama | NIM | Kontribusi | Commit |
 | :--- | :--- | :--- | :--- |
-| Tabhita Kristy Silitonga | 251402023 | Project Manager, Setup Q00, Finalisasi laporan & readme | 277c52c |
-| Jevine Jeje Zakarias Simanjuntak | 251402085 | Langkah 2 (Q01-Q04) View & WITH CHECK OPTION, Refleksi A | 2ee4bfd |
-| Fadila Lisma Sari | 251402117 | Langkah 3 (Q05-Q08) Materialized View & Concurrent Refresh, Refleksi B | 0d36a6f |
-| Qairsya Naurel ein Yaliki | 251402120 | Langkah 4 (Q09-Q13) Trigger Audit Baris & Pernyataan, Refleksi C | 9bb7819 |
-| Reynald Alvaro Pasaribu | 251402147 | Langkah 5 & 6 (Q14-Q21) Constraint & Expand-Contract, Refleksi D & E | ed8c976 |
+| Tabhita Kristy Silitonga | 251402023 | Project Manager, Langkah 1 (Setup), Langkah 6 (Q25-Q30) Audit & UU PDP, Reflektif E, Finalisasi laporan & readme | 277c52c |
+| Jevine Jeje Zakarias Simanjuntak | 251402085 | Langkah 2 (Q01-Q05) Kepemilikan, GRANT & Peran Berlapis, Reflektif A | 2ee4bfd |
+| Fadila Lisma Sari | 251402117 | Langkah 3 (Q06-Q11) Row-Level Security (RLS) Multi-penyewa, Reflektif B | 0d36a6f |
+| Qairsya Naurel ein Yaliki | 251402120 | Langkah 4 (Q12-Q18) Menutup Celah SQL Injection, Reflektif C | 9bb7819 |
+| Reynald Alvaro Pasaribu | 251402147 | Langkah 5 (Q19-Q24) Enkripsi, Hashing, dan Penyamaran, Reflektif D | ed8c976 |
 
-## Q1ΓÇôQ30
+## Q1-Q30
 Perintah, keluaran, dan alasan keputusan
 
 ### Q06 – Default Deny
@@ -375,11 +375,11 @@ FROM (
 **Alasan Keputusan:**
 > Pada tahap ini dilakukan perbandingan jumlah kombinasi unik kota dan tanggal lahir sebelum dan sesudah generalisasi menjadi tahun kelahiran. Generalisasi dipilih untuk mengurangi detail informasi pribadi sehingga risiko identifikasi ulang terhadap pelanggan dapat dikurangi.
 
-## Refleksi AΓÇôE
+## Refleksi A-E
 
 ### Refleksi A
 
-**1. Pada Q1, hak biasa bisa dicabut dari pemilik, tetapi risikonya tetap ada. Jelaskan dari data mengapa ΓÇ£mencabut hakΓÇ¥ bukan jalan keluar untuk keluhan K1, dan apa yang menjadi jalan keluarnya.**
+**1. Pada Q1, hak biasa bisa dicabut dari pemilik, tetapi risikonya tetap ada. Jelaskan dari data mengapa “mencabut hak” bukan jalan keluar untuk keluhan K1, dan apa yang menjadi jalan keluarnya**
 > Perintah `REVOKE` ga bisa menyelesaikan masalah kebocoran data lintas penyewa karena dua alasan dari percobaan kita:
 Pertama, `REVOKE` dan `GRANT` hanya mengatur izin di level tabel, bukan per baris. pdahal di `q00_setup.sql`, data dari ketiga penyewa (total 30.000 baris, masing-masing 10.000 baris) digabung dlm satu tabel `lab11.pelanggan`. Kalau izinnya dicabut, aplikasi malah tidak bisa mengakses data penyewanya sendiri, tapi kalau diberikan, aplikasi justru bisa melihat seluruh 30.000 baris milik penyewa lain.
 Kedua, dari `q01_hak_pemilik.sql` terbukti kalau peran pemilik tabel bisa memberikan kembali hak `UPDATE` yg sudah dicabut menggunakan perintah `GRANT` ke dirinya sendiri. Jadi, mencabut hak ga akan mempan kalau koneksi masih memakai akun pemilik.
@@ -391,8 +391,6 @@ Jalan keluarnya: aplikasi ga boleh login sebagai pemilik (`skema_owner` diset `N
 > Menurut saya, meskipun RLS sudah diterapkan, aplikasi tetap perlu menambahkan `WHERE tenant_id = ...` pada query SQL. Hal ini karena RLS dan WHERE memiliki fungsi yang berbeda. RLS digunakan untuk membatasi akses data di tingkat database supaya setiap tenant hanya bisa melihat data miliknya sendiri. Sedangkan `WHERE tenant_id` digunakan untuk mengambil data sesuai kebutuhan aplikasi.
 Selain itu, penggunaan `WHERE tenant_id` juga bisa membantu proses pencarian data menjadi lebih efisien, terutama jika kolom tenant_id sudah memiliki indeks. Hal ini dapat dilihat melalui execution plan menggunakan perintah EXPLAIN untuk mengetahui bagaimana PostgreSQL menjalankan query tersebut.
 Jadi, menurut saya keduanya tetap diperlukan karena RLS berfungsi sebagai pengaman data, sedangkan WHERE membantu aplikasi mengambil data yang dibutuhkan dengan lebih terarah. Dengan begitu, keamanan data tetap terjaga dan proses pengambilan data juga bisa lebih optimal.
-
-
 
 ### Reflektif C
 
@@ -408,12 +406,27 @@ Sementara itu, tiga lapis pertahanan lainnya berperan sebagai **pertahanan berla
 **Sebuah tim menyatakan basis datanya aman karena semua kolom peka sudah dienkripsi. Sebutkan dua ancaman yang tetap terbuka dan satu risiko operasional enkripsi kolom, masing-masing dengan bukti dari Q21–Q24.**
 > Meskipun semua kolom sensitif sudah dienkripsi, masih terdapat ancaman kebocoran kunci enkripsi yang dapat membuat pihak tidak berwenang membaca data asli, seperti yang diuji pada Q21 dan Q22. Selain itu, data yang sudah disamarkan masih berpotensi mengungkap identitas seseorang melalui kombinasi informasi seperti kota dan tanggal lahir, sebagaimana dibuktikan pada Q23 dan Q24. Risiko operasional lainnya adalah kehilangan kunci enkripsi, sehingga data yang sudah dienkripsi tidak dapat didekripsi kembali. Oleh karena itu, enkripsi harus disertai perlindungan kunci dan penyamaran data agar keamanan informasi lebih terjamin. 
 
+### Reflektif E
+**Jejak audit memuat NIK lama di nilai_lama. Jelaskan ketegangan antara kewajiban merekam pemrosesan (Pasal 31) dan kewajiban menghapus data (Pasal 43), lalu usulkan satu penyelesaian yang dapat Anda pertahankan di hadapan pemeriksa.**
+> Ketegangan terjadi karena Pasal 43 UU PDP mewajibkan kita menghapus data pribadi secara tuntas (termasuk yang ada di salinan) saat ada permintaan. Namun, Pasal 31 mewajibkan kita merekam seluruh aktivitas pemrosesan. Ketika kita menjalankan perintah DELETE pada tabel utama, aktivitas tersebut terekam oleh trigger dan masuk ke tabel jejak_audit. Imbasnya, data sensitif seperti NIK pada nilai_lama justru tersimpan kembali dan masih "hidup" di dalam log audit. Jadi karena itu, kami akan menerapkan Kebijakan Retensi Data yang tertulis secara formal. Log audit tidak boleh diubah atau dihapus secara manual per baris karena akan merusak integritas audit/pertanggungjawaban. Sebagai jalan tengahnya, NIK tersebut akan tetap berada di log audit sesuai jadwal masa simpan (misalnya 1 tahun), dan setelah masa retensinya habis/kedaluwarsa, seluruh log pada periode tersebut akan dimusnahkan secara otomatis oleh sistem.
+
 ## Peta Tiket #1134 ke UU PDP
 | Keluhan | Pasal relevan | Kontrol teknis pencegah | Bukti |
-|---|---|---|---|
+| K1: Aplikasi login sebagai pemilik tabel, lalu salah HAPUS. | Pasal 57 (Sanksi & keamanan) | Peran berlapis, cabut akses login dari pemilik tabel. | Q01 & Q05 |
+| K2: Penyewa A membaca penyewa B karena aplikasi lupa WHERE. | Pasal 57 (Kerahasiaan/Akses tidak sah) | RLS (Row-Level Security) dengan FORCE dan manajemen konteks SET LOCAL. | Q09 & Q10 |
+| K3: Kotak pencarian kebobolan SQL Injection. | Pasal 46 (Pemberitahuan kebocoran) | Kueri Berparameter dan Allowlist (Daftar Putih). | Q15 & Q16 |
+| K4: Backup rahasia dipindah ke flashdisk dengan teks biasa. | Pasal 57 (Keamanan & Kerahasiaan) | Penyamaran (Data Masking) salinan & Enkripsi pada tabel. | Q21 & Q23 |
+| K5: Permintaan hapus tidak tuntas, data hidup di cadangan. | Pasal 8 & 43 (Hak subjek menghapus data) | Jadwal retensi log, permintaan hapus sebagai antrean data. | Q28 & Q29 |
 
 ## Pernyataan Etika
-Seluruh percobaan serangan hanya dijalankan pada kontainer lab11 milik
-sendiri di jaringan tertutup. (tanda tangan tiap anggota)
+Disetujui secara digital oleh seluruh anggota kelompok 3: Tabhita Kristy Silitonga, Jevine Jeje Zakarias Simanjuntak, Fadila Lisma Sari, Qairsya Naurel ein Yaliki, Reynald Alvaro Pasaribu.
 
 ## Penggunaan AI dan Verifikasi
+**Penggunaan AI:**
+Selama pengerjaan tugas kelompok ini, kami menggunakan bantuan AI untuk:
+1. Membantu *troubleshooting* terminal saat fase persiapan (Langkah 1), seperti menangani *error* pembuatan direktori di dalam kontainer Docker dan melacak nama jaringan Docker yang tidak terdeteksi.
+2. Menyusun ulang (*reverse-engineering*) kode skrip awal (`docker-compose.lab11.yml`, `lab11_setup.sql`, dan `rentan.py`) berdasarkan parameter di modul PDF, dikarenakan adanya kendala teknis pada tautan unduhan *file* di e-learning.
+3. Membantu memberikan referensi struktur sintaks SQL pada Langkah 6 (Q25-Q29) serta bertukar pikiran dalam menyusun draf argumen analisis untuk bagian Reflektif dan pemetaan UU PDP.
+
+**Verifikasi:**
+Meskipun menggunakan bantuan AI, seluruh perintah SQL dan kode Python telah diketik, dieksekusi, dan diuji coba secara mandiri oleh setiap anggota kelompok di dalam kontainer `lab11` lokal masing-masing yang berjalan pada jaringan tertutup. Seluruh *output* kueri, angka baris data, dan hasil tangkapan layar yang dilampirkan adalah keluaran nyata dari basis data kami. Kami telah memeriksa kesesuaian logika setiap jawaban dengan materi presentasi dosen dan memahami sepenuhnya seluruh keputusan serta alternatif yang kami tuliskan.
