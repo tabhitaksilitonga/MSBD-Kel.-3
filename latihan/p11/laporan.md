@@ -1,13 +1,16 @@
 ﻿# Laporan Latihan Kelompok Pertemuan 11
 
+## Tautan Merge Request Kelompok
+https://github.com/tabhitaksilitonga/MSBD-Kel.-3/pull/5
+
 ## Identitas Kelompok
 | Nama | NIM | Kontribusi | Commit |
 | :--- | :--- | :--- | :--- |
-| Tabhita Kristy Silitonga | 251402023 | Project Manager, Langkah 1 (Setup), Langkah 6 (Q25-Q30) Audit & UU PDP, Reflektif E, Finalisasi laporan & readme | 277c52c |
-| Jevine Jeje Zakarias Simanjuntak | 251402085 | Langkah 2 (Q01-Q05) Kepemilikan, GRANT & Peran Berlapis, Reflektif A | 2ee4bfd |
-| Fadila Lisma Sari | 251402117 | Langkah 3 (Q06-Q11) Row-Level Security (RLS) Multi-penyewa, Reflektif B | 0d36a6f |
-| Qairsya Naurel ein Yaliki | 251402120 | Langkah 4 (Q12-Q18) Menutup Celah SQL Injection, Reflektif C | 9bb7819 |
-| Reynald Alvaro Pasaribu | 251402147 | Langkah 5 (Q19-Q24) Enkripsi, Hashing, dan Penyamaran, Reflektif D | ed8c976 |
+| Tabhita Kristy Silitonga | 251402023 | Project Manager, Langkah 1 (Setup), Langkah 6 (Q25-Q30) Audit & UU PDP, Reflektif E, Finalisasi laporan & readme | 1e9f2aa |
+| Jevine Jeje Zakarias Simanjuntak | 251402085 | Langkah 2 (Q01-Q05) Kepemilikan, GRANT & Peran Berlapis, Reflektif A | 08ad838 |
+| Fadila Lisma Sari | 251402117 | Langkah 3 (Q06-Q11) Row-Level Security (RLS) Multi-penyewa, Reflektif B | 05c3cd9 |
+| Qairsya Naurel ein Yaliki | 251402120 | Langkah 4 (Q12-Q18) Menutup Celah SQL Injection, Reflektif C | 20f10ec |
+| Reynald Alvaro Pasaribu | 251402147 | Langkah 5 (Q19-Q24) Enkripsi, Hashing, dan Penyamaran, Reflektif D | 47fa13a |
 
 ## Q1-Q30
 Perintah, keluaran, dan alasan keputusan
